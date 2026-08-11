@@ -1,0 +1,327 @@
+# GoldenTeleports Configuration
+# Main configuration file
+
+# Cross-server homes, warps and spawn.
+#
+# Every home, warp and spawn is saved with the name of the server it was created on. When a
+# player teleports to one that lives elsewhere, this server announces the destination over
+# Redis and then asks the proxy to move the connection; the destination server places them on
+# arrival. Requires a shared database (see database.yml: use mysql or mongo, not yaml) and a
+# proxy (BungeeCord/Velocity).
+MULTI_SERVER:
+  ENABLED: false
+
+  # Must match the name this server has in the proxy's config, since that is the name used to
+  # transfer players to it. Give each server a distinct value.
+  SERVER_NAME: "server-1"
+
+  REDIS:
+    # Servers that share a channel route teleports to each other. Use different channels to
+    # keep two networks apart on the same Redis instance.
+    CHANNEL: "gl-teleports"
+
+    # Values support ${ENV_VAR} substitution so secrets can live outside this file.
+    HOST: "localhost"
+    PORT: 6379
+    PASSWORD: ""
+    # Refuse to start the bus with an empty password unless this is explicitly set to true.
+    ALLOW_INSECURE: false
+
+  # HMAC secret shared by all servers on the channel. Leave empty to disable signing
+  # (NOT recommended: anyone able to publish to Redis could move players at will).
+  SECRET: ""
+
+  # Ticks to wait after the transferred player joins before placing them. Raise it if another
+  # plugin moves players on join, or the teleport lands first and gets overwritten.
+  ARRIVAL_DELAY: 30
+
+  # Retry policy for failed publishes (non-blocking backoff).
+  RETRY:
+    ATTEMPTS: 3
+    BACKOFF_MS: 100
+
+# Home limits
+home-limits:
+  default: 3
+  permissions:
+    vip: 5      # golden.teleports.homes.limit.vip
+    staff: 10   # golden.teleports.homes.limit.staff
+    owner: -1   # golden.teleports.homes.limit.owner (-1 = unlimited)
+
+# Teleport settings
+teleport-settings:
+  # General settings
+  move-threshold: 0.1
+  cancel-on-damage: true
+
+  # Home teleportation
+  home:
+    delay: 3                  # Delay in seconds before teleport
+    cooldown: 10              # Cooldown in seconds after teleport
+    cost: 100.0               # Cost in economy (0.0 for free)
+    immunity: 60              # Damage immunity in ticks after teleport (20 ticks = 1 second)
+    cancel-on-move: true      # Cancel if player moves during delay
+    effects: true             # Enable effects
+
+  # Warp teleportation
+  warp:
+    delay: 0
+    cooldown: 5
+    cost: 50.0
+    immunity: 20
+    cancel-on-move: false
+    effects: true
+
+  # TPA teleportation
+  tpa:
+    delay: 5
+    cooldown: 0
+    cost: 0.0
+    immunity: 0
+    request-timeout: 30       # Time in seconds before request expires
+    priority: "recent"        # "recent" or "oldest" - which request to accept/deny first
+    cancel-on-move: true
+    effects: true
+
+  # TPA Here teleportation
+  tpahere:
+    delay: 5
+    cooldown: 0
+    cost: 0.0
+    immunity: 0
+    request-timeout: 30
+    cancel-on-move: true
+    effects: true
+
+  # Spawn teleportation
+  spawn:
+    delay: 3
+    cooldown: 0
+    cost: 0.0
+    immunity: 30
+    cancel-on-move: true
+    effects: true
+
+# World blacklist per teleport type
+blacklist:
+  home:
+    - "event_world"
+    - "minigame_world"
+  warp: []
+  tpa:
+    - "event_world"
+  tpahere:
+    - "event_world"
+  spawn: []
+
+# Safety checks for teleportation
+safety:
+  enabled: true
+  min-height: 0
+  max-height: 320
+  check-radius: 2
+  check-lava: true
+  check-suffocation: true
+  check-water-trap: true
+  require-floor: true
+  max-search-down: 5
+
+# Effects configuration
+effects:
+  home:
+    delay-tick:
+      enabled: true
+      sound:
+        enabled: true
+        type: "BLOCK_NOTE_BLOCK_PLING"
+        volume: 0.5
+        pitch: 1.5
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 10
+      actionbar:
+        enabled: true
+        text: "<gold>Teleporting in <yellow>{time}</yellow> seconds...</gold>"
+      bossbar:
+        enabled: true
+        text: "<gold>Teleporting in <yellow>{time}</yellow> seconds...</gold>"
+        color: "GREEN"
+
+    teleport:
+      enabled: true
+      sound:
+        enabled: true
+        type: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 1.0
+        pitch: 1.0
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 50
+      title:
+        enabled: true
+        text: "<gradient:#00ff00:#00ffff>Home</gradient>"
+        subtitle: "<gray>Welcome back!</gray>"
+        fade-in: 10
+        stay: 40
+        fade-out: 10
+
+  warp:
+    delay-tick:
+      enabled: true
+      sound:
+        enabled: true
+        type: "BLOCK_NOTE_BLOCK_PLING"
+        volume: 0.5
+        pitch: 1.5
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 10
+      actionbar:
+        enabled: true
+        text: "<aqua>Teleporting in <yellow>{time}</yellow> seconds...</aqua>"
+      bossbar:
+        enabled: true
+        text: "<aqua>Teleporting in <yellow>{time}</yellow> seconds...</aqua>"
+        color: "BLUE"
+
+    teleport:
+      enabled: true
+      sound:
+        enabled: true
+        type: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 1.0
+        pitch: 1.0
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 50
+      title:
+        enabled: true
+        text: "<gradient:#0000ff:#00ffff>Warp</gradient>"
+        subtitle: ""
+        fade-in: 10
+        stay: 40
+        fade-out: 10
+
+  tpa:
+    delay-tick:
+      enabled: true
+      sound:
+        enabled: true
+        type: "BLOCK_NOTE_BLOCK_PLING"
+        volume: 0.5
+        pitch: 1.5
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 10
+      actionbar:
+        enabled: true
+        text: "<light_purple>Teleporting in <yellow>{time}</yellow> seconds...</light_purple>"
+      bossbar:
+        enabled: true
+        text: "<light_purple>Teleporting in <yellow>{time}</yellow> seconds...</light_purple>"
+        color: "PURPLE"
+
+    teleport:
+      enabled: true
+      sound:
+        enabled: true
+        type: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 1.0
+        pitch: 1.0
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 50
+      title:
+        enabled: true
+        text: "<gradient:#ff00ff:#ff00aa>TPA</gradient>"
+        subtitle: ""
+        fade-in: 10
+        stay: 40
+        fade-out: 10
+
+  tpahere:
+    delay-tick:
+      enabled: true
+      sound:
+        enabled: true
+        type: "BLOCK_NOTE_BLOCK_PLING"
+        volume: 0.5
+        pitch: 1.5
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 10
+      actionbar:
+        enabled: true
+        text: "<light_purple>Teleporting in <yellow>{time}</yellow> seconds...</light_purple>"
+      bossbar:
+        enabled: true
+        text: "<light_purple>Teleporting in <yellow>{time}</yellow> seconds...</light_purple>"
+        color: "PURPLE"
+
+    teleport:
+      enabled: true
+      sound:
+        enabled: true
+        type: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 1.0
+        pitch: 1.0
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 50
+      title:
+        enabled: true
+        text: "<gradient:#ff00ff:#ff00aa>TPA Here</gradient>"
+        subtitle: ""
+        fade-in: 10
+        stay: 40
+        fade-out: 10
+
+  spawn:
+    delay-tick:
+      enabled: true
+      sound:
+        enabled: true
+        type: "BLOCK_NOTE_BLOCK_PLING"
+        volume: 0.5
+        pitch: 1.5
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 10
+      actionbar:
+        enabled: true
+        text: "<yellow>Teleporting in <gold>{time}</gold> seconds...</yellow>"
+      bossbar:
+        enabled: true
+        text: "<yellow>Teleporting in <gold>{time}</gold> seconds...</yellow>"
+        color: "YELLOW"
+
+    teleport:
+      enabled: true
+      sound:
+        enabled: true
+        type: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 1.0
+        pitch: 1.0
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 50
+      title:
+        enabled: true
+        text: "<gradient:#ffaa00:#ffff00>Spawn</gradient>"
+        subtitle: ""
+        fade-in: 10
+        stay: 40
+        fade-out: 10
+
+# Miscellaneous settings
+clear-cooldowns-on-quit: false

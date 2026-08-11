@@ -1,0 +1,30 @@
+# Database Configuration for GoldenTeleports
+# Available types: yaml, sqlite, h2, mysql, mongo
+
+# Current database type
+#
+# For cross-server homes/warps/spawn (MULTI_SERVER in config.yml) every server must read and
+# write the same records, so only "mysql" and "mongo" work. The yaml, sqlite and h2 backends
+# store their data inside each server's own plugin folder, and each server would see a
+# different set of homes and warps.
+type: "yaml"
+
+# MySQL Configuration
+mysql:
+  host: "localhost"
+  port: 3306
+  database: "goldenteleports"
+  username: "root"
+  password: "password"
+  useSSL: false
+  pool-size: 10
+
+# MongoDB Configuration
+mongo:
+  host: "localhost"
+  port: 27017
+  database: "goldenteleports"
+  auth:
+    enabled: false
+    username: "admin"
+    password: "password"

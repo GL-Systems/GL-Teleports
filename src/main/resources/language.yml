@@ -1,0 +1,87 @@
+# GoldenTeleports Language Configuration
+# All messages and text strings
+
+# Error messages
+errors:
+  player-only: "<red>This command can only be used by players!</red>"
+  no-permission: "<red>You don't have permission to do that!</red>"
+  player-offline: "<red>That player is not online!</red>"
+  specify-player: "<red>Please specify a player!</red>"
+  specify-home: "<red>Please specify a home name!</red>"
+  specify-warp-name: "<red>Please specify a warp name!</red>"
+  home-not-found: "<red>Home '<yellow>{name}</yellow>' not found!</red>"
+  warp-not-found: "<red>Warp '<yellow>{name}</yellow>' not found!</red>"
+  spawn-not-set: "<red>Spawn has not been set yet!</red>"
+  world-not-found: "<red>World not found!</red>"
+  no-homes: "<red>You don't have any homes!</red>"
+  home-limit-reached: "<red>You have reached your home limit! (<yellow>{limit}</yellow>)</red>"
+  # Staff-facing variants, for the /listhomes and <player>:<home> commands
+  no-homes-other: "<red><yellow>{player}</yellow> doesn't have any homes!</red>"
+  home-not-found-other: "<red><yellow>{player}</yellow> has no home called '<yellow>{name}</yellow>'!</red>"
+  player-never-played: "<red>This server has never seen a player called '<yellow>{player}</yellow>'!</red>"
+  cannot-teleport-self: "<red>You cannot teleport to yourself!</red>"
+  world-blacklisted: "<red>You cannot teleport to that world!</red>"
+  insufficient-funds: "<red>You don't have enough money! Cost: <yellow>{cost}</yellow></red>"
+  cooldown: "<red>You must wait <yellow>{time}</yellow> seconds before teleporting again!</red>"
+  tpa-disabled: "<red><yellow>{player}</yellow> has teleport requests disabled!</red>"
+  no-pending-requests: "<red>You have no pending teleport requests!</red>"
+  no-outgoing-requests: "<red>You have no outgoing teleport requests!</red>"
+  transfer-failed: "<red>Could not send you to that server. Please try again.</red>"
+  
+  # Safety errors
+  unsafe-location:
+    void: "<red>That location is in the void!</red>"
+    lava: "<red>That location is dangerous - lava detected!</red>"
+    suffocation: "<red>That location would suffocate you!</red>"
+    water-trap: "<red>That location is a water trap!</red>"
+    too-high: "<red>That location is too high!</red>"
+    no-floor: "<red>That location has no floor!</red>"
+
+# Home messages
+home:
+  created: "<green>Home '<yellow>{name}</yellow>' created successfully!</green>"
+  updated: "<green>Home '<yellow>{name}</yellow>' updated successfully!</green>"
+  deleted: "<green>Home '<yellow>{name}</yellow>' deleted successfully!</green>"
+
+  # Staff commands. {player} is the owner acted on, not the sender.
+  admin-created: "<green>Home '<yellow>{name}</yellow>' created for <yellow>{player}</yellow>!</green>"
+  admin-updated: "<green>Home '<yellow>{name}</yellow>' of <yellow>{player}</yellow> updated!</green>"
+  admin-deleted: "<green>Home '<yellow>{name}</yellow>' of <yellow>{player}</yellow> deleted!</green>"
+
+  # /listhomes. {count} is the number of entries that follow.
+  list-header: "<gold>Homes of <yellow>{player}</yellow> (<yellow>{count}</yellow>):</gold>"
+  list-entry: "<gray>- <yellow>{name}</yellow> in <white>{world}</white> at <white>{x} {y} {z}</white> (<white>{server}</white>)</gray>"
+
+# Warp messages
+warp:
+  created: "<green>Warp '<yellow>{name}</yellow>' created successfully!</green>"
+  updated: "<green>Warp '<yellow>{name}</yellow>' updated successfully!</green>"
+  deleted: "<green>Warp '<yellow>{name}</yellow>' deleted successfully!</green>"
+
+# Spawn messages
+spawn:
+  set: "<green>Spawn set successfully!</green>"
+
+# TPA messages
+tpa:
+  request-sent: "<green>Teleport request sent to <yellow>{player}</yellow>!</green>"
+  request-received: "<yellow>{player}</yellow> wants to teleport to you!"
+  request-accepted: "<green>Teleport request accepted!</green>"
+  request-denied: "<red>Teleport request denied!</red>"
+  request-cancelled: "<yellow>Teleport request cancelled!</yellow>"
+  request-expired: "<red>Teleport request expired!</red>"
+  enabled: "<green>Teleport requests enabled!</green>"
+  disabled: "<red>Teleport requests disabled!</red>"
+
+# /glteleports reload
+reload:
+  success: "<green>Configuration reloaded.</green>"
+  invalid: "<red>Not reloaded — <yellow>{error}</yellow>. The previous configuration is still in use.</red>"
+  # {section} is read only at startup, so an edit to it needs a restart
+  restart-required: "<yellow><gold>{section}</gold> changed, but it is only read at startup. Restart the server to apply it.</yellow>"
+
+# Teleport messages
+teleport:
+  success: "<green>Teleported successfully!</green>"
+  delay-cancelled: "<red>Teleport cancelled!</red>"
+  transferring: "<yellow>Sending you to <gold>{server}</gold>...</yellow>"

@@ -1,0 +1,23 @@
+name: GL-Teleports
+version: '${version}'
+description: Homes, warps, spawn and teleport requests, with optional cross-server support.
+author: 7Str1kes
+website: https://github.com/GL-Systems/GL-Teleports
+
+main: org.glstudio.teleports.GTeleports
+api-version: '1.21.4'
+load: POSTWORLD
+
+# Optional: without it the economy costs in config.yml are simply not charged.
+softdepend: [Vault]
+
+# Downloaded by the server at load time instead of being shaded into the jar, so a
+# server only pulls the backend it actually configured in database.yml.
+libraries:
+  - com.zaxxer:HikariCP:6.0.0
+  - org.xerial:sqlite-jdbc:3.45.1.0
+  - com.h2database:h2:2.2.224
+  - com.mysql:mysql-connector-j:8.3.0
+  - org.mongodb:mongodb-driver-sync:5.1.0
+  - org.mongodb:mongodb-driver-core:5.1.0
+  - org.mongodb:bson:5.1.0
