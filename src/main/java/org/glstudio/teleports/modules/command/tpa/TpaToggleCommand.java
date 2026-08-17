@@ -9,7 +9,6 @@ import org.bukkit.entity.Player;
 import java.util.List;
 
 public class TpaToggleCommand extends Command {
-
     private final GTeleports plugin;
 
     public TpaToggleCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
@@ -19,18 +18,18 @@ public class TpaToggleCommand extends Command {
 
     @Override
     public List<String> aliases() {
-        return List.of("tpatoggle");
+        return List.of("tptoggle");
     }
 
     @Override
     public List<String> usage() {
-        return List.of("/tpatoggle");
+        return List.of(plugin.getMessages().raw("usage.tpatoggle"));
     }
 
     @Override
     public void execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sendMessage(sender, plugin.getConfigManager().getLanguageConfig().getString("errors.player-only"));
+            plugin.getMessages().send(sender, "errors.player-only");
             return;
         }
 

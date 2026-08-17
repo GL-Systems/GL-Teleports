@@ -1,9 +1,11 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.core.Permissions;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Map;
@@ -11,13 +13,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DelayManager {
+    public static final String BYPASS_PERMISSION = Permissions.BYPASS_DELAY;
 
     private final GTeleports plugin;
-    private final Map<UUID, DelayData> delays;
+    private final Map<UUID, DelayData> delays = new ConcurrentHashMap<>();
 
     public DelayManager(GTeleports plugin) {
         this.plugin = plugin;
-        this.delays = new ConcurrentHashMap<>();
     }
 
     public boolean hasDelay(Player player) {
@@ -25,86 +27,110 @@ public class DelayManager {
     }
 
     public void startDelay(Player player, Location destination, TeleportType type, Runnable onComplete) {
-        if (player.hasPermission("golden.teleports.bypass.delay")) {
+        startDelay(player, destination, type,
+                plugin.getSettings().getInt("teleport-settings." + type.getConfigKey() + ".delay", 0),
+                onComplete);
+    }
+
+    public void startDelay(Player player, Location destination, TeleportType type, int delaySeconds,
+                           Runnable onComplete) {
+        if (player.hasPermission(BYPASS_PERMISSION)) {
             onComplete.run();
             return;
         }
-
-        String path = "teleport-settings." + type.getConfigKey() + ".delay";
-        int delaySeconds = plugin.getConfigManager().getMainConfig().getInt(path, 0);
 
         if (delaySeconds <= 0) {
             onComplete.run();
             return;
         }
 
-        cancelDelay(player);
+        cancelDelay(player, false);
 
-        Location startLocation = player.getLocation().clone();
+        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.DELAY_START);
 
-        DelayData delayData = new DelayData(
-                startLocation,
-                destination,
-                type,
-                delaySeconds,
-                onComplete
-        );
+        DelayData data = new DelayData(player.getLocation().clone(), destination, type, delaySeconds, onComplete);
+        delays.put(player.getUniqueId(), data);
 
-        delays.put(player.getUniqueId(), delayData);
+        data.task = new BukkitRunnable() {
+            @Override
+            public void run() {
+                DelayData current = delays.get(player.getUniqueId());
+                if (current != data) {
+                    cancel();
+                    return;
+                }
 
-        BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
-            DelayData data = delays.get(player.getUniqueId());
-            if (data == null) {
-                return;
+                if (!player.isOnline()) {
+                    delays.remove(player.getUniqueId(), data);
+                    cancel();
+                    return;
+                }
+
+                if (current.remainingSeconds <= 0) {
+                    delays.remove(player.getUniqueId(), current);
+                    cancel();
+                    plugin.getEffectManager().clearBossBar(player);
+                    current.onComplete.run();
+                    return;
+                }
+
+                plugin.getEffectManager().playDelayEffects(player, type,
+                        current.remainingSeconds, current.totalSeconds);
+                current.remainingSeconds--;
             }
-
-            plugin.getEffectManager().playDelayEffects(player, type, data.remainingSeconds);
-
-            data.remainingSeconds--;
-
-            if (data.remainingSeconds <= 0) {
-                delays.remove(player.getUniqueId());
-                data.task.cancel();
-                data.onComplete.run();
-            }
-        }, 0L, 20L);
-
-        delayData.task = task;
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
     public void cancelDelay(Player player) {
-        DelayData data = delays.remove(player.getUniqueId());
-        if (data != null && data.task != null) {
-            data.task.cancel();
+        cancelDelay(player, true);
+    }
 
-            String message = plugin.getConfigManager().getLanguageConfig().getString("teleport.delay-cancelled");
-            if (message != null && !message.isEmpty()) {
-                player.sendMessage(message);
-            }
+    public void cancelDelay(Player player, boolean notify) {
+        DelayData data = delays.remove(player.getUniqueId());
+        if (data == null) {
+            return;
+        }
+
+        if (data.task != null) {
+            data.task.cancel();
+        }
+
+        plugin.getEffectManager().clearBossBar(player);
+
+        if (notify) {
+            plugin.getEffectManager().playTeleportEffects(player, data.type,
+                    EffectManager.EffectStage.CANCELLED);
+            plugin.getMessages().send(player, "teleport.delay-cancelled");
         }
     }
 
     public boolean shouldCancelOnMove(Player player) {
-        if (!hasDelay(player)) {
-            return false;
-        }
-
         DelayData data = delays.get(player.getUniqueId());
         if (data == null) {
             return false;
         }
 
         String path = "teleport-settings." + data.type.getConfigKey() + ".cancel-on-move";
-        return plugin.getConfigManager().getMainConfig().getBoolean(path, true);
+        return plugin.getSettings().getBoolean(path, true);
     }
 
-    public boolean hasMoved(Player player, Location from) {
+    public boolean hasMoved(Player player) {
+        DelayData data = delays.get(player.getUniqueId());
+        if (data == null) {
+            return false;
+        }
+
+        Location from = data.startLocation;
         Location to = player.getLocation();
 
-        double threshold = plugin.getConfigManager().getMainConfig().getDouble("teleport-settings.move-threshold", 0.1);
+        if (from.getWorld() == null || !from.getWorld().equals(to.getWorld())) {
+            return true;
+        }
 
-        return Math.abs(from.getX() - to.getX()) > threshold ||
-                Math.abs(from.getZ() - to.getZ()) > threshold;
+        double threshold = plugin.getSettings()
+                .getDouble("teleport-settings.move-threshold", 0.5);
+
+        return from.distanceSquared(to) > threshold * threshold;
     }
 
     public void safeDisable() {
@@ -117,17 +143,20 @@ public class DelayManager {
     }
 
     private static class DelayData {
-        Location startLocation;
-        Location destination;
-        TeleportType type;
+        final Location startLocation;
+        final Location destination;
+        final TeleportType type;
+        final Runnable onComplete;
+        final int totalSeconds;
+
         int remainingSeconds;
-        Runnable onComplete;
         BukkitTask task;
 
         DelayData(Location startLocation, Location destination, TeleportType type, int seconds, Runnable onComplete) {
             this.startLocation = startLocation;
             this.destination = destination;
             this.type = type;
+            this.totalSeconds = seconds;
             this.remainingSeconds = seconds;
             this.onComplete = onComplete;
         }

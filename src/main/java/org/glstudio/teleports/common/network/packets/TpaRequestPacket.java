@@ -9,6 +9,7 @@ import java.util.UUID;
 
 @Getter
 public class TpaRequestPacket extends Packet {
+    private final UUID id;
 
     private final String sourceInstance;
     private final String handlerServer;
@@ -23,9 +24,10 @@ public class TpaRequestPacket extends Packet {
     private final TpaRequest.TpaType tpaType;
     private final long timestamp;
 
-    public TpaRequestPacket(String sourceInstance, String handlerServer, UUID requesterUuid,
+    public TpaRequestPacket(UUID id, String sourceInstance, String handlerServer, UUID requesterUuid,
                             String requesterName, String requesterServer, UUID targetUuid,
                             String targetName, TpaRequest.TpaType tpaType) {
+        this.id = id;
         this.sourceInstance = sourceInstance;
         this.handlerServer = handlerServer;
         this.requesterUuid = requesterUuid;
@@ -35,6 +37,11 @@ public class TpaRequestPacket extends Packet {
         this.targetName = targetName;
         this.tpaType = tpaType;
         this.timestamp = System.currentTimeMillis();
+    }
+
+    @Override
+    public String destinationServer() {
+        return handlerServer;
     }
 
     @Override

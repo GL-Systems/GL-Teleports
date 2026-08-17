@@ -1,6 +1,7 @@
 package org.glstudio.teleports.modules.command.home;
 
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.core.Failures;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
@@ -9,9 +10,9 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class HomeCommand extends Command {
-
     private final GTeleports plugin;
 
     public HomeCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
@@ -26,36 +27,69 @@ public class HomeCommand extends Command {
 
     @Override
     public List<String> usage() {
-        return List.of("/home <nombre>");
+        return List.of(plugin.getMessages().raw("usage.home"));
     }
 
     @Override
     public void execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sendMessage(sender, plugin.getConfigManager().getLanguageConfig().getString("errors.player-only"));
+            plugin.getMessages().send(sender, "errors.player-only");
             return;
+        }
+
+        if (args.length > 0) {
+            HomeAdmin.Target target = HomeAdmin.parse(args[0]);
+
+            if (target != null) {
+                openOthersHome(player, target);
+                return;
+            }
         }
 
         plugin.getHomeManager().getHomes(player.getUniqueId()).thenAccept(homes -> {
             if (homes.isEmpty()) {
-                sendMessage(player, plugin.getConfigManager().getLanguageConfig().getString("errors.no-homes"));
+                plugin.getMessages().send(player, "errors.no-homes");
                 return;
             }
 
             String homeName;
             if (args.length == 0) {
-                if (homes.size() == 1) {
-                    homeName = homes.get(0).getName();
-                } else {
-                    sendMessage(player, plugin.getConfigManager().getLanguageConfig().getString("errors.specify-home"));
+                if (homes.size() != 1) {
+                    plugin.getMessages().send(player, "errors.multiple-homes",
+                            "{homes}", homes.stream().map(Home::getName).collect(Collectors.joining(", ")));
                     return;
                 }
+                homeName = homes.get(0).getName();
             } else {
                 homeName = args[0];
             }
 
             plugin.getHomeManager().teleportToHome(player, homeName);
         });
+    }
+
+    private void openOthersHome(Player player, HomeAdmin.Target target) {
+        Failures.guard(plugin, HomeAdmin.resolve(plugin, target.playerName()).thenAccept(owner ->
+                plugin.getServer().getScheduler().runTask(plugin, () -> {
+                    if (!player.isOnline()) {
+                        return;
+                    }
+
+                    if (owner == null) {
+                        plugin.getMessages().send(player, "errors.player-never-played",
+                                "{player}", target.playerName());
+                        return;
+                    }
+
+                    if (player.hasPermission(HomeAdmin.PERMISSION)) {
+                        plugin.getHomeManager().teleportToHomeOf(player, owner.uuid(), owner.name(),
+                                target.homeName());
+                        return;
+                    }
+
+                    plugin.getHomeManager().teleportToSharedHome(player, owner.uuid(), owner.name(),
+                            target.homeName());
+                })), "HomeCommand#openOthersHome", player);
     }
 
     @Override
@@ -67,6 +101,12 @@ public class HomeCommand extends Command {
         List<String> names = new ArrayList<>();
         for (Home home : plugin.getHomeManager().getCachedHomes(player.getUniqueId())) {
             names.add(home.getName());
+        }
+
+        names.addAll(plugin.getHomeManager().getCachedShareLabels(player.getUniqueId()));
+
+        if (sender.hasPermission(HomeAdmin.PERMISSION)) {
+            return filterTabCompletion(HomeAdmin.completeHomeArgument(plugin, player, args[0]), args[0]);
         }
 
         return filterTabCompletion(names, args[0]);

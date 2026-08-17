@@ -3,8 +3,9 @@ package org.glstudio.teleports.modules.database.impl;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.modules.database.DatabaseProvider;
 import org.glstudio.teleports.modules.model.Home;
+import org.glstudio.teleports.modules.model.PlayerRef;
+import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.SpawnLocation;
 import org.glstudio.teleports.modules.model.Warp;
 
@@ -18,18 +19,31 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public class SQLiteProvider implements DatabaseProvider {
-
-    private final GTeleports plugin;
+public class SQLiteProvider extends SqlProvider {
     private HikariDataSource dataSource;
 
     public SQLiteProvider(GTeleports plugin) {
-        this.plugin = plugin;
+        super(plugin);
+    }
+
+    @Override
+    protected Connection connection() throws SQLException {
+        return dataSource.getConnection();
+    }
+
+    @Override
+    protected String replaceInto(String table, String... columns) {
+        return "INSERT OR REPLACE INTO " + table + columnsAndPlaceholders(columns);
+    }
+
+    @Override
+    protected String autoIncrementId() {
+        return "INTEGER PRIMARY KEY AUTOINCREMENT";
     }
 
     @Override
     public CompletableFuture<Void> initialize() {
-        return CompletableFuture.runAsync(() -> {
+        return run(() -> {
             try {
                 File dataFolder = new File(plugin.getDataFolder(), "data");
                 if (!dataFolder.exists()) {
@@ -84,27 +98,74 @@ public class SQLiteProvider implements DatabaseProvider {
             );
 
             conn.createStatement().execute(
-                    "CREATE TABLE IF NOT EXISTS spawn (" +
-                            "id INTEGER PRIMARY KEY, " +
+                    "CREATE TABLE IF NOT EXISTS spawns (" +
+                            "server VARCHAR(64) PRIMARY KEY, " +
+                            "world VARCHAR(64) NOT NULL, " +
+                            "x DOUBLE NOT NULL, " +
+                            "y DOUBLE NOT NULL, " +
+                            "z DOUBLE NOT NULL, " +
+                            "yaw FLOAT NOT NULL, " +
+                            "pitch FLOAT NOT NULL" +
+                            ")"
+            );
+
+            conn.createStatement().execute(
+                    "CREATE TABLE IF NOT EXISTS player_settings (" +
+                            "uuid VARCHAR(36) PRIMARY KEY, " +
+                            "tpa_blocked BOOLEAN NOT NULL DEFAULT FALSE" +
+                            ")"
+            );
+
+            conn.createStatement().execute(
+                    "CREATE TABLE IF NOT EXISTS players (" +
+                            "uuid VARCHAR(36) PRIMARY KEY, " +
+                            "name VARCHAR(16) NOT NULL, " +
+                            "last_seen BIGINT NOT NULL" +
+                            ")"
+            );
+
+            conn.createStatement().execute(
+                    "CREATE TABLE IF NOT EXISTS last_locations (" +
+                            "uuid VARCHAR(36) NOT NULL, " +
+                            "server VARCHAR(64) NOT NULL, " +
                             "world VARCHAR(64) NOT NULL, " +
                             "x DOUBLE NOT NULL, " +
                             "y DOUBLE NOT NULL, " +
                             "z DOUBLE NOT NULL, " +
                             "yaw FLOAT NOT NULL, " +
                             "pitch FLOAT NOT NULL, " +
-                            "server VARCHAR(64)" +
+                            "updated_at BIGINT NOT NULL, " +
+                            "PRIMARY KEY (uuid, server)" +
                             ")"
             );
 
+            createFeatureTables(conn);
+
+            String server = currentServer();
             SqlSchema.addColumnIfMissing(conn, "homes", "server", "VARCHAR(64)");
             SqlSchema.addColumnIfMissing(conn, "warps", "server", "VARCHAR(64)");
-            SqlSchema.addColumnIfMissing(conn, "spawn", "server", "VARCHAR(64)");
+            addWarpOverrideColumns(conn);
+            SqlSchema.backfillServer(conn, "homes", server);
+            SqlSchema.backfillServer(conn, "warps", server);
+            SqlSchema.migrateLegacySpawn(conn, server);
+            SqlSchema.createIndexes(conn);
+
+            SqlSchema.ensureVersionTable(conn);
+            SqlSchema.writeVersion(conn,
+                    "INSERT OR REPLACE INTO schema_version (id, version, updated_at) VALUES (1, ?, ?)",
+                    SqlSchema.CURRENT_VERSION);
         }
+    }
+
+    private String currentServer() {
+        return plugin.getMultiServerSettings() == null
+                ? "unnamed-server"
+                : plugin.getMultiServerSettings().getServerName();
     }
 
     @Override
     public CompletableFuture<Void> shutdown() {
-        return CompletableFuture.runAsync(() -> {
+        return run(() -> {
             if (dataSource != null && !dataSource.isClosed()) {
                 dataSource.close();
             }
@@ -113,13 +174,12 @@ public class SQLiteProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<List<Home>> getHomes(UUID owner) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supply(() -> {
             List<Home> homes = new ArrayList<>();
             String query = "SELECT * FROM homes WHERE owner = ?";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, owner.toString());
                 ResultSet rs = stmt.executeQuery();
 
@@ -147,12 +207,11 @@ public class SQLiteProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Home> getHome(UUID owner, String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supply(() -> {
             String query = "SELECT * FROM homes WHERE owner = ? AND name = ?";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, owner.toString());
                 stmt.setString(2, name);
                 ResultSet rs = stmt.executeQuery();
@@ -181,13 +240,12 @@ public class SQLiteProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Void> saveHome(Home home) {
-        return CompletableFuture.runAsync(() -> {
+        return run(() -> {
             String query = "INSERT OR REPLACE INTO homes (owner, name, world, x, y, z, yaw, pitch, created_at, server) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, home.getOwner().toString());
                 stmt.setString(2, home.getName());
                 stmt.setString(3, home.getWorld());
@@ -208,12 +266,11 @@ public class SQLiteProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Void> deleteHome(UUID owner, String name) {
-        return CompletableFuture.runAsync(() -> {
+        return run(() -> {
             String query = "DELETE FROM homes WHERE owner = ? AND name = ?";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, owner.toString());
                 stmt.setString(2, name);
                 stmt.executeUpdate();
@@ -224,51 +281,17 @@ public class SQLiteProvider implements DatabaseProvider {
     }
 
     @Override
-    public CompletableFuture<Integer> getHomeCount(UUID owner) {
-        return CompletableFuture.supplyAsync(() -> {
-            String query = "SELECT COUNT(*) FROM homes WHERE owner = ?";
-
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-
-                stmt.setString(1, owner.toString());
-                ResultSet rs = stmt.executeQuery();
-
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed to get home count", e);
-            }
-
-            return 0;
-        });
-    }
-
-    @Override
     public CompletableFuture<List<Warp>> getAllWarps() {
-        return CompletableFuture.supplyAsync(() -> {
+        return supply(() -> {
             List<Warp> warps = new ArrayList<>();
             String query = "SELECT * FROM warps";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 ResultSet rs = stmt.executeQuery();
 
                 while (rs.next()) {
-                    warps.add(new Warp(
-                            rs.getString("name"),
-                            rs.getString("world"),
-                            rs.getDouble("x"),
-                            rs.getDouble("y"),
-                            rs.getDouble("z"),
-                            rs.getFloat("yaw"),
-                            rs.getFloat("pitch"),
-                            rs.getString("permission"),
-                            rs.getLong("created_at"),
-                            rs.getString("server")
-                    ));
+                    warps.add(readWarp(rs));
                 }
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to get warps", e);
@@ -280,28 +303,16 @@ public class SQLiteProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Warp> getWarp(String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supply(() -> {
             String query = "SELECT * FROM warps WHERE name = ?";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, name);
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
-                    return new Warp(
-                            rs.getString("name"),
-                            rs.getString("world"),
-                            rs.getDouble("x"),
-                            rs.getDouble("y"),
-                            rs.getDouble("z"),
-                            rs.getFloat("yaw"),
-                            rs.getFloat("pitch"),
-                            rs.getString("permission"),
-                            rs.getLong("created_at"),
-                            rs.getString("server")
-                    );
+                    return readWarp(rs);
                 }
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to get warp", e);
@@ -313,13 +324,12 @@ public class SQLiteProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Void> saveWarp(Warp warp) {
-        return CompletableFuture.runAsync(() -> {
-            String query = "INSERT OR REPLACE INTO warps (name, world, x, y, z, yaw, pitch, permission, created_at, server) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        return run(() -> {
+            String query = replaceInto("warps", "name", "world", "x", "y", "z", "yaw", "pitch",
+                    "permission", "created_at", "server", "cost", "cooldown", "delay");
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, warp.getName());
                 stmt.setString(2, warp.getWorld());
                 stmt.setDouble(3, warp.getX());
@@ -330,6 +340,7 @@ public class SQLiteProvider implements DatabaseProvider {
                 stmt.setString(8, warp.getPermission());
                 stmt.setLong(9, warp.getCreatedAt());
                 stmt.setString(10, warp.getServer());
+                bindWarpOverrides(stmt, warp, 11);
 
                 stmt.executeUpdate();
             } catch (SQLException e) {
@@ -339,15 +350,14 @@ public class SQLiteProvider implements DatabaseProvider {
     }
 
     @Override
-    public CompletableFuture<Void> deleteWarp(String name) {
-        return CompletableFuture.runAsync(() -> {
+    public CompletableFuture<Boolean> deleteWarp(String name) {
+        return supply(() -> {
             String query = "DELETE FROM warps WHERE name = ?";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, name);
-                stmt.executeUpdate();
+                return stmt.executeUpdate() > 0;
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to delete warp", e);
             }
@@ -355,35 +365,12 @@ public class SQLiteProvider implements DatabaseProvider {
     }
 
     @Override
-    public CompletableFuture<Boolean> warpExists(String name) {
-        return CompletableFuture.supplyAsync(() -> {
-            String query = "SELECT COUNT(*) FROM warps WHERE name = ?";
-
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-
-                stmt.setString(1, name);
-                ResultSet rs = stmt.executeQuery();
-
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed to check warp existence", e);
-            }
-
-            return false;
-        });
-    }
-
-    @Override
     public CompletableFuture<SpawnLocation> getSpawn() {
-        return CompletableFuture.supplyAsync(() -> {
-            String query = "SELECT * FROM spawn WHERE id = 1";
+        return supply(() -> {
+            String query = "SELECT * FROM spawns LIMIT 1";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
@@ -407,24 +394,149 @@ public class SQLiteProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Void> saveSpawn(SpawnLocation spawn) {
-        return CompletableFuture.runAsync(() -> {
-            String query = "INSERT OR REPLACE INTO spawn (id, world, x, y, z, yaw, pitch, server) VALUES (1, ?, ?, ?, ?, ?, ?, ?)";
+        return run(() -> {
+            String query = "INSERT OR REPLACE INTO spawns (server, world, x, y, z, yaw, pitch) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
+            try (Connection conn = dataSource.getConnection()) {
 
-                stmt.setString(1, spawn.getWorld());
-                stmt.setDouble(2, spawn.getX());
-                stmt.setDouble(3, spawn.getY());
-                stmt.setDouble(4, spawn.getZ());
-                stmt.setFloat(5, spawn.getYaw());
-                stmt.setFloat(6, spawn.getPitch());
-                stmt.setString(7, spawn.getServer());
+                SqlSchema.clearOtherSpawns(conn, spawn.getServer());
 
-                stmt.executeUpdate();
+                try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                    stmt.setString(1, spawn.getServer());
+                    stmt.setString(2, spawn.getWorld());
+                    stmt.setDouble(3, spawn.getX());
+                    stmt.setDouble(4, spawn.getY());
+                    stmt.setDouble(5, spawn.getZ());
+                    stmt.setFloat(6, spawn.getYaw());
+                    stmt.setFloat(7, spawn.getPitch());
+
+                    stmt.executeUpdate();
+                }
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to save spawn", e);
             }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Boolean> isTpaBlocked(UUID uuid) {
+        return supply(() -> {
+            String query = "SELECT tpa_blocked FROM player_settings WHERE uuid = ?";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    return rs.getBoolean("tpa_blocked");
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to read player settings", e);
+            }
+
+            return false;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> setTpaBlocked(UUID uuid, boolean blocked) {
+        return run(() -> {
+            String query = "INSERT OR REPLACE INTO player_settings (uuid, tpa_blocked) VALUES (?, ?)";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setBoolean(2, blocked);
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to save player settings", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> rememberPlayer(UUID uuid, String name) {
+        return run(() -> {
+            String query = "INSERT OR REPLACE INTO players (uuid, name, last_seen) VALUES (?, ?, ?)";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setString(2, name);
+                stmt.setLong(3, System.currentTimeMillis());
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to remember player", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<PlayerRef> findPlayer(String name) {
+        return supply(() -> {
+            String query = "SELECT uuid, name FROM players WHERE LOWER(name) = LOWER(?)";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, name);
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    return new PlayerRef(UUID.fromString(rs.getString("uuid")), rs.getString("name"));
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to look up player", e);
+            }
+
+            return null;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> saveLastLocation(UUID uuid, String server, StoredLocation location) {
+        return run(() -> {
+            String query = "INSERT OR REPLACE INTO last_locations (uuid, server, world, x, y, z, yaw, pitch, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setString(2, server);
+                stmt.setString(3, location.world());
+                stmt.setDouble(4, location.x());
+                stmt.setDouble(5, location.y());
+                stmt.setDouble(6, location.z());
+                stmt.setFloat(7, location.yaw());
+                stmt.setFloat(8, location.pitch());
+                stmt.setLong(9, System.currentTimeMillis());
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to save last location", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<StoredLocation> getLastLocation(UUID uuid, String server) {
+        return supply(() -> {
+            String query = "SELECT * FROM last_locations WHERE uuid = ? AND server = ?";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setString(2, server);
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    return new StoredLocation(rs.getString("world"), rs.getDouble("x"),
+                            rs.getDouble("y"), rs.getDouble("z"), rs.getFloat("yaw"), rs.getFloat("pitch"));
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to read last location", e);
+            }
+
+            return null;
         });
     }
 }

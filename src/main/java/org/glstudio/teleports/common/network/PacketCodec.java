@@ -2,6 +2,7 @@ package org.glstudio.teleports.common.network;
 
 import com.google.gson.Gson;
 import org.glstudio.teleports.common.network.packets.CacheInvalidatePacket;
+import org.glstudio.teleports.common.network.packets.ServerPresencePacket;
 import org.glstudio.teleports.common.network.packets.TeleportRequestPacket;
 import org.glstudio.teleports.common.network.packets.TpaRequestPacket;
 import org.glstudio.teleports.common.network.packets.TpaResponsePacket;
@@ -13,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 public final class PacketCodec {
-
     private static final Gson GSON = new Gson();
     private static final String SEPARATOR = ":";
     private static final String HMAC_ALGORITHM = "HmacSHA256";
@@ -50,6 +50,7 @@ public final class PacketCodec {
         return switch (packetType) {
             case TELEPORT_REQUEST -> GSON.fromJson(json, TeleportRequestPacket.class);
             case CACHE_INVALIDATE -> GSON.fromJson(json, CacheInvalidatePacket.class);
+            case SERVER_PRESENCE -> GSON.fromJson(json, ServerPresencePacket.class);
             case TPA_REQUEST -> GSON.fromJson(json, TpaRequestPacket.class);
             case TPA_RESPONSE -> GSON.fromJson(json, TpaResponsePacket.class);
             case TPA_TRAVEL -> GSON.fromJson(json, TpaTravelPacket.class);

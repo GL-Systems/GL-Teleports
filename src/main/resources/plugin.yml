@@ -8,8 +8,276 @@ main: org.glstudio.teleports.GTeleports
 api-version: '1.21.4'
 load: POSTWORLD
 
-# Optional: without it the economy costs in config.yml are simply not charged.
-softdepend: [Vault]
+# Optional. Without Vault the economy costs in config.yml are simply not charged; without
+# PlaceholderAPI the %glteleports_...% placeholders are never registered. Neither is required.
+softdepend: [Vault, PlaceholderAPI]
+
+# Scheme: golden.teleports.<module>.<action>
+#
+# The pre-1.1 names are still honoured. Each is declared at the bottom as a parent of its
+# replacement, so granting an old node still grants what it always did — through Bukkit's child
+# relationships, with no permission setup needing to change on the day you upgrade. They are
+# scheduled for removal in the next major version.
+permissions:
+  golden.teleports.*:
+    description: Everything below, including staff and bypass nodes.
+    default: op
+    children:
+      golden.teleports.player.*: true
+      golden.teleports.admin.*: true
+      golden.teleports.bypass.*: true
+
+  golden.teleports.player.*:
+    description: The commands an ordinary player uses.
+    default: true
+    children:
+      golden.teleports.home.use: true
+      golden.teleports.home.set: true
+      golden.teleports.home.delete: true
+      golden.teleports.home.list: true
+      golden.teleports.warp.use: true
+      golden.teleports.warp.list: true
+      golden.teleports.spawn.use: true
+      golden.teleports.tpa.send: true
+      golden.teleports.tpa.here: true
+      golden.teleports.tpa.accept: true
+      golden.teleports.tpa.deny: true
+      golden.teleports.tpa.cancel: true
+      golden.teleports.tpa.toggle: true
+      golden.teleports.tpa.block: true
+      golden.teleports.home.share: true
+
+  golden.teleports.home.use:
+    description: Travel to one of your homes.
+    default: true
+  golden.teleports.home.set:
+    description: Create or move one of your homes.
+    default: true
+  golden.teleports.home.delete:
+    description: Delete one of your homes.
+    default: true
+  golden.teleports.home.list:
+    description: List your own homes.
+    default: true
+  golden.teleports.warp.use:
+    description: Travel to a warp. Warps may also carry a permission of their own.
+    default: true
+  golden.teleports.warp.list:
+    description: List the warps you can use.
+    default: true
+  golden.teleports.spawn.use:
+    description: Travel to spawn.
+    default: true
+  golden.teleports.tpa.send:
+    description: Ask to teleport to another player.
+    default: true
+  golden.teleports.tpa.here:
+    description: Ask another player to teleport to you.
+    default: true
+  golden.teleports.tpa.accept:
+    description: Accept a teleport request.
+    default: true
+  golden.teleports.tpa.deny:
+    description: Refuse a teleport request.
+    default: true
+  golden.teleports.tpa.cancel:
+    description: Withdraw a request you sent.
+    default: true
+  golden.teleports.tpa.toggle:
+    description: Turn incoming teleport requests off and on.
+    default: true
+  golden.teleports.tpa.block:
+    description: Refuse teleport requests from one particular player.
+    default: true
+  golden.teleports.home.share:
+    description: Let other players use your homes.
+    default: true
+
+  golden.teleports.admin.*:
+    description: Every staff-facing node.
+    default: op
+    children:
+      golden.teleports.admin.reload: true
+      golden.teleports.admin.backup: true
+      golden.teleports.admin.history: true
+      golden.teleports.admin.lock: true
+      golden.teleports.home.admin: true
+      golden.teleports.warp.set: true
+      golden.teleports.warp.delete: true
+      golden.teleports.spawn.set: true
+
+  golden.teleports.admin.reload:
+    description: Reload the configuration and read the plugin's status.
+    default: op
+  golden.teleports.admin.backup:
+    description: Write a backup on demand.
+    default: op
+  golden.teleports.admin.history:
+    description: Read the teleport audit log.
+    default: op
+  golden.teleports.admin.lock:
+    description: Close and reopen warps and servers for maintenance.
+    default: op
+  golden.teleports.home.admin:
+    description: Read and edit the homes of other players.
+    default: op
+  golden.teleports.warp.set:
+    description: Create or move a warp.
+    default: op
+  golden.teleports.warp.delete:
+    description: Delete a warp.
+    default: op
+  golden.teleports.spawn.set:
+    description: Move this server's spawn.
+    default: op
+
+  golden.teleports.bypass.*:
+    description: Skip the restrictions that apply to everyone else.
+    default: op
+    children:
+      golden.teleports.bypass.cooldown: true
+      golden.teleports.bypass.delay: true
+      golden.teleports.bypass.cost: true
+      golden.teleports.bypass.safety: true
+      golden.teleports.bypass.blacklist: true
+      golden.teleports.bypass.lock: true
+
+  golden.teleports.bypass.cooldown:
+    description: Teleport without waiting out a cooldown.
+    default: op
+  golden.teleports.bypass.delay:
+    description: Teleport without the countdown.
+    default: op
+  golden.teleports.bypass.cost:
+    description: Teleport without paying.
+    default: op
+  golden.teleports.bypass.safety:
+    description: Teleport to a destination the safety checks would reject.
+    default: op
+  golden.teleports.bypass.blacklist:
+    description: Teleport into a blacklisted world.
+    default: op
+  golden.teleports.bypass.lock:
+    description: Use a warp or server that is closed for maintenance.
+    default: op
+
+  golden.teleports.home.limit.vip:
+    description: Grants the home limit configured under home-limits.permissions.vip.
+    default: false
+  golden.teleports.home.limit.staff:
+    description: Grants the home limit configured under home-limits.permissions.staff.
+    default: false
+  golden.teleports.home.limit.owner:
+    description: Grants the home limit configured under home-limits.permissions.owner.
+    default: false
+  golden.teleports.home.limit.unlimited:
+    description: No home limit at all.
+    default: false
+
+  # ── Deprecated aliases ──────────────────────────────────────────────────────
+  # Each grants its replacement as a child, so an existing permission setup keeps working
+  # unchanged. Move to the new names when convenient; these go in the next major version.
+  golden.teleports.home:
+    description: 'Deprecated: use golden.teleports.home.use'
+    default: false
+    children:
+      golden.teleports.home.use: true
+  golden.teleports.sethome:
+    description: 'Deprecated: use golden.teleports.home.set'
+    default: false
+    children:
+      golden.teleports.home.set: true
+  golden.teleports.delhome:
+    description: 'Deprecated: use golden.teleports.home.delete'
+    default: false
+    children:
+      golden.teleports.home.delete: true
+  golden.teleports.listhomes:
+    description: 'Deprecated: use golden.teleports.home.list'
+    default: false
+    children:
+      golden.teleports.home.list: true
+  golden.teleports.admin.homes:
+    description: 'Deprecated: use golden.teleports.home.admin'
+    default: false
+    children:
+      golden.teleports.home.admin: true
+  golden.teleports.warp:
+    description: 'Deprecated: use golden.teleports.warp.use'
+    default: false
+    children:
+      golden.teleports.warp.use: true
+      golden.teleports.warp.list: true
+  golden.teleports.setwarp:
+    description: 'Deprecated: use golden.teleports.warp.set'
+    default: false
+    children:
+      golden.teleports.warp.set: true
+  golden.teleports.delwarp:
+    description: 'Deprecated: use golden.teleports.warp.delete'
+    default: false
+    children:
+      golden.teleports.warp.delete: true
+  golden.teleports.spawn:
+    description: 'Deprecated: use golden.teleports.spawn.use'
+    default: false
+    children:
+      golden.teleports.spawn.use: true
+  golden.teleports.setspawn:
+    description: 'Deprecated: use golden.teleports.spawn.set'
+    default: false
+    children:
+      golden.teleports.spawn.set: true
+  golden.teleports.tpa:
+    description: 'Deprecated: use golden.teleports.tpa.send'
+    default: false
+    children:
+      golden.teleports.tpa.send: true
+  golden.teleports.tpahere:
+    description: 'Deprecated: use golden.teleports.tpa.here'
+    default: false
+    children:
+      golden.teleports.tpa.here: true
+  golden.teleports.tpaccept:
+    description: 'Deprecated: use golden.teleports.tpa.accept'
+    default: false
+    children:
+      golden.teleports.tpa.accept: true
+  golden.teleports.tpdeny:
+    description: 'Deprecated: use golden.teleports.tpa.deny'
+    default: false
+    children:
+      golden.teleports.tpa.deny: true
+  golden.teleports.tpacancel:
+    description: 'Deprecated: use golden.teleports.tpa.cancel'
+    default: false
+    children:
+      golden.teleports.tpa.cancel: true
+  golden.teleports.tpatoggle:
+    description: 'Deprecated: use golden.teleports.tpa.toggle'
+    default: false
+    children:
+      golden.teleports.tpa.toggle: true
+  golden.teleports.homes.limit.vip:
+    description: 'Deprecated: use golden.teleports.home.limit.vip'
+    default: false
+    children:
+      golden.teleports.home.limit.vip: true
+  golden.teleports.homes.limit.staff:
+    description: 'Deprecated: use golden.teleports.home.limit.staff'
+    default: false
+    children:
+      golden.teleports.home.limit.staff: true
+  golden.teleports.homes.limit.owner:
+    description: 'Deprecated: use golden.teleports.home.limit.owner'
+    default: false
+    children:
+      golden.teleports.home.limit.owner: true
+  golden.teleports.homes.limit.unlimited:
+    description: 'Deprecated: use golden.teleports.home.limit.unlimited'
+    default: false
+    children:
+      golden.teleports.home.limit.unlimited: true
 
 # Downloaded by the server at load time instead of being shaded into the jar, so a
 # server only pulls the backend it actually configured in database.yml.

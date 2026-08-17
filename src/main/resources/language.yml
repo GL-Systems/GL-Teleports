@@ -1,19 +1,61 @@
 # GoldenTeleports Language Configuration
 # All messages and text strings
 
+# Bumped whenever a release changes the shape of this file. The plugin compares it against the
+# version it expects and says so on startup when they differ, so a stale file is noticed then
+# rather than through whichever setting quietly stopped applying.
+config-version: 1
+
+# Prepended to every message below, so the plugin identifies itself without each line repeating
+# it. Leave empty for no prefix.
+prefix: ""
+
 # Error messages
 errors:
   player-only: "<red>This command can only be used by players!</red>"
   no-permission: "<red>You don't have permission to do that!</red>"
   player-offline: "<red>That player is not online!</red>"
+  player-not-found: "<red><yellow>{player}</yellow> could not be found.</red>"
   specify-player: "<red>Please specify a player!</red>"
+  specify-warp: "<red>Please specify a warp name!</red>"
+  specify-lock-target: "<red>Specify what to lock: <yellow>warp</yellow> or <yellow>server</yellow>.</red>"
+  invalid-duration: "<red><yellow>{value}</yellow> is not a duration. Try 30m, 2h or 7d.</red>"
+  unknown-warp-field: "<red><yellow>{field}</yellow> is not a warp setting. Use cost, cooldown or delay.</red>"
+
+  # Scoped home limits, on top of the total. See home-limits.per-world / per-server in config.yml.
+  home-limit-world: "<red>You may only keep <yellow>{limit}</yellow> home(s) in <yellow>{world}</yellow>.</red>"
+  home-limit-server: "<red>You may only keep <yellow>{limit}</yellow> home(s) on <yellow>{server}</yellow>.</red>"
+
+  # Shared homes
+  shares-disabled: "<red>Home sharing is turned off on this server.</red>"
+  share-self: "<red>You already have access to your own homes.</red>"
+  share-limit-reached: "<red>That home is already shared with <yellow>{limit}</yellow> people.</red>"
+  share-not-found: "<red><yellow>{player}</yellow> does not have access to <yellow>{home}</yellow>.</red>"
+  home-not-shared: "<red><yellow>{player}</yellow> has not shared <yellow>{name}</yellow> with you.</red>"
+
+  # Per-player TPA blocks
+  tpa-blocks-disabled: "<red>Blocking individual players is turned off on this server.</red>"
+  block-self: "<red>You cannot block yourself.</red>"
+  already-blocked: "<red><yellow>{player}</yellow> is already blocked.</red>"
+  not-blocked: "<red><yellow>{player}</yellow> is not blocked.</red>"
+  block-limit-reached: "<red>You cannot block more than <yellow>{limit}</yellow> players.</red>"
+
+  # Maintenance locks
+  warp-locked: "<red><yellow>{name}</yellow> is closed: <gray>{reason}</gray></red>"
+  server-locked: "<red><yellow>{server}</yellow> is closed: <gray>{reason}</gray></red>"
+
+  history-disabled: "<red>Teleport history is turned off in config.yml.</red>"
   specify-home: "<red>Please specify a home name!</red>"
+  # Shown by /home with no argument when there is more than one to choose from.
+  multiple-homes: "<red>Pick a home: <yellow>{homes}</yellow></red>"
   specify-warp-name: "<red>Please specify a warp name!</red>"
   home-not-found: "<red>Home '<yellow>{name}</yellow>' not found!</red>"
   warp-not-found: "<red>Warp '<yellow>{name}</yellow>' not found!</red>"
   spawn-not-set: "<red>Spawn has not been set yet!</red>"
   world-not-found: "<red>World not found!</red>"
   no-homes: "<red>You don't have any homes!</red>"
+  no-warps: "<red>There are no warps you can use.</red>"
+  home-already-exists: "<red>You already have a home called '<yellow>{name}</yellow>'!</red>"
   home-limit-reached: "<red>You have reached your home limit! (<yellow>{limit}</yellow>)</red>"
   # Staff-facing variants, for the /listhomes and <player>:<home> commands
   no-homes-other: "<red><yellow>{player}</yellow> doesn't have any homes!</red>"
@@ -27,6 +69,15 @@ errors:
   no-pending-requests: "<red>You have no pending teleport requests!</red>"
   no-outgoing-requests: "<red>You have no outgoing teleport requests!</red>"
   transfer-failed: "<red>Could not send you to that server. Please try again.</red>"
+  server-unavailable: "<red>That destination is on <yellow>{server}</yellow>, which cannot be reached right now.</red>"
+  teleport-expired: "<red>Your teleport took too long and was cancelled.</red>"
+  network-error: "<red>The teleport network did not respond. Please try again.</red>"
+  database-error: "<red>That could not be saved. Please tell an administrator.</red>"
+  invalid-permission: "<red>'<yellow>{permission}</yellow>' is not a valid permission node. Use words separated by dots, like <white>server.warp.vip</white>.</red>"
+  invalid-name: "<red>Use only letters, numbers, - and _, up to <yellow>{max}</yellow> characters.</red>"
+  warp-on-other-server: "<red>Warp '<yellow>{name}</yellow>' already exists on <yellow>{server}</yellow>. Delete it there first.</red>"
+  request-already-sent: "<red>You already have a request waiting for <yellow>{player}</yellow>!</red>"
+  too-many-requests: "<red>You already have <yellow>{limit}</yellow> requests waiting.</red>"
   
   # Safety errors
   unsafe-location:
@@ -42,6 +93,9 @@ home:
   created: "<green>Home '<yellow>{name}</yellow>' created successfully!</green>"
   updated: "<green>Home '<yellow>{name}</yellow>' updated successfully!</green>"
   deleted: "<green>Home '<yellow>{name}</yellow>' deleted successfully!</green>"
+  confirm-overwrite: "<yellow>'<gold>{name}</gold>' already exists. Run the command again within 15s to move it.</yellow>"
+  renamed: "<green>Home '<yellow>{old}</yellow>' is now '<yellow>{new}</yellow>'.</green>"
+  moved: "<green>Home '<yellow>{name}</yellow>' moved here.</green>"
 
   # Staff commands. {player} is the owner acted on, not the sender.
   admin-created: "<green>Home '<yellow>{name}</yellow>' created for <yellow>{player}</yellow>!</green>"
@@ -58,20 +112,47 @@ warp:
   updated: "<green>Warp '<yellow>{name}</yellow>' updated successfully!</green>"
   deleted: "<green>Warp '<yellow>{name}</yellow>' deleted successfully!</green>"
 
+  permission-set: "<green>Warp '<yellow>{name}</yellow>' now requires <yellow>{permission}</yellow>.</green>"
+
+  # Per-warp cost, cooldown and delay. Clearing one puts the warp back on the global setting,
+  # which is not the same as setting it to zero.
+  override-set: "<green>Warp '<yellow>{name}</yellow>' now uses <yellow>{field} {value}</yellow>.</green>"
+  override-cleared: "<green>Warp '<yellow>{name}</yellow>' now uses the default <yellow>{field}</yellow>.</green>"
+
+  # /warps. {count} is the total the sender may use, across all pages.
+  list-header: "<gold>Warps (<yellow>{count}</yellow>) — page <yellow>{page}</yellow>/<yellow>{pages}</yellow>:</gold>"
+  list-entry: "<gray>- <yellow>{name}</yellow> in <white>{world}</white> at <white>{x} {y} {z}</white> (<white>{server}</white>)</gray>"
+
 # Spawn messages
 spawn:
   set: "<green>Spawn set successfully!</green>"
 
 # TPA messages
 tpa:
+  # The clickable buttons shown under an incoming request.
+  button-accept: "<green>[ACCEPT]</green>"
+  button-deny: "<red>[DENY]</red>"
+
   request-sent: "<green>Teleport request sent to <yellow>{player}</yellow>!</green>"
-  request-received: "<yellow>{player}</yellow> wants to teleport to you!"
+  # {direction} is filled from direction-to-you / direction-to-them below.
+  request-received: "<yellow>{player}</yellow> wants {direction}. Expires in <yellow>{time}</yellow>s."
+  request-received-remote: "<yellow>{player}</yellow> wants {direction}, from <gold>{server}</gold>. Expires in <yellow>{time}</yellow>s."
+  direction-to-you: "to teleport to you"
+  direction-to-them: "you to teleport to them"
   request-accepted: "<green>Teleport request accepted!</green>"
   request-denied: "<red>Teleport request denied!</red>"
   request-cancelled: "<yellow>Teleport request cancelled!</yellow>"
   request-expired: "<red>Teleport request expired!</red>"
   enabled: "<green>Teleport requests enabled!</green>"
   disabled: "<red>Teleport requests disabled!</red>"
+
+  # /tpablock. A blocked player is never told they were blocked — they see the same refusal as
+  # somebody who turned requests off entirely, which is the point of a quiet block.
+  blocked: "<green>Blocked teleport requests from <yellow>{player}</yellow>.</green>"
+  unblocked: "<green>Unblocked <yellow>{player}</yellow>.</green>"
+  block-list-header: "<gold>Blocked players (<yellow>{count}</yellow>):</gold>"
+  block-list-entry: "<gray>- <yellow>{player}</yellow></gray>"
+  block-list-empty: "<gray>You have not blocked anybody.</gray>"
 
 # /glteleports reload
 reload:
@@ -85,3 +166,101 @@ teleport:
   success: "<green>Teleported successfully!</green>"
   delay-cancelled: "<red>Teleport cancelled!</red>"
   transferring: "<yellow>Sending you to <gold>{server}</gold>...</yellow>"
+  refunded: "<green><yellow>{cost}</yellow> has been returned to you.</green>"
+  returned: "<gray>Returned to where you left this server.</gray>"
+  # Only shown once the queue is deeper than queue.notice-threshold; below that the wait is a
+  # tick or two and saying anything would be noise.
+  queued: "<gray>Teleporting shortly... (<yellow>{position}</yellow> ahead of you)</gray>"
+
+# Values substituted into placeholders and menus rather than sent on their own.
+placeholders:
+  unlimited: "∞"
+  free: "Free"
+
+# Homes shared through /homeinvite.
+share:
+  granted: "<green>Gave <yellow>{player}</yellow> access to <yellow>{home}</yellow>.</green>"
+  granted-temporary: "<green>Gave <yellow>{player}</yellow> access to <yellow>{home}</yellow> for <yellow>{time}s</yellow>.</green>"
+  received: "<green><yellow>{player}</yellow> shared their home <yellow>{home}</yellow> with you. Use <yellow>/home {player}:{home}</yellow>.</green>"
+  revoked: "<yellow>Took back <yellow>{player}</yellow>'s access to <yellow>{home}</yellow>.</yellow>"
+  permanent: "never"
+  header-received: "<gold>Homes shared with you (<yellow>{count}</yellow>):</gold>"
+  header-given: "<gold>Homes you have shared (<yellow>{count}</yellow>):</gold>"
+  entry-received: "<gray>- <yellow>{player}</yellow>:<white>{home}</white> <dark_gray>(expires: {expires})</dark_gray></gray>"
+  entry-given: "<gray>- <white>{home}</white> <dark_gray>to</dark_gray> <yellow>{player}</yellow> <dark_gray>(expires: {expires})</dark_gray></gray>"
+  none-received: "<gray>Nobody has shared a home with you.</gray>"
+  none-given: "<gray>You have not shared any homes.</gray>"
+
+# /glteleports history
+history:
+  header: "<gold>Teleport history for <yellow>{subject}</yellow> (<yellow>{count}</yellow>):</gold>"
+  empty: "<gray>No teleports recorded for <yellow>{subject}</yellow>.</gray>"
+  entry: "<gray><dark_gray>{date}</dark_gray> <yellow>{type}</yellow> <white>{destination}</white> <dark_gray>{from} → {to}</dark_gray></gray>"
+  entry-cross: "<gray><dark_gray>{date}</dark_gray> <yellow>{type}</yellow> <white>{destination}</white> <aqua>{from-server} → {to-server}</aqua> <dark_gray>{to}</dark_gray></gray>"
+
+# /glteleports lock
+lock:
+  default-reason: "Maintenance"
+  placed: "<green>Closed <yellow>{type} {target}</yellow>: <gray>{reason}</gray></green>"
+  lifted: "<green>Reopened <yellow>{type} {target}</yellow>.</green>"
+  not-found: "<red><yellow>{type} {target}</yellow> was not closed.</red>"
+  header: "<gold>Closed destinations (<yellow>{count}</yellow>):</gold>"
+  entry: "<gray>- <yellow>{type}</yellow> <white>{target}</white> <dark_gray>({reason}, by {by})</dark_gray></gray>"
+  none: "<gray>Nothing is closed right now.</gray>"
+
+# /glteleports status
+status:
+  header: "<gold>GL-Teleports status:</gold>"
+  database: "<gray>- storage: <white>{type}</white></gray>"
+  server: "<gray>- this server: <white>{server}</white></gray>"
+  bus-disabled: "<gray>- multi-server: <white>turned off in config.yml</white></gray>"
+  bus-offline: "<gray>- multi-server: <red>offline</red> — cross-server destinations are refused; retrying in the background</gray>"
+  bus-online: "<gray>- multi-server: <green>online</green> on channel <white>{channel}</white></gray>"
+  servers: "<gray>- servers seen (<white>{count}</white>): <white>{servers}</white></gray>"
+  network-players: "<gray>- players elsewhere on the network: <white>{count}</white></gray>"
+  pending: "<gray>- teleports waiting to land here: <white>{count}</white></gray>"
+  version: "<gray>GL-Teleports <white>{version}</white></gray>"
+
+  # /glteleports debug <player>
+  debug-header: "<gold>State held for <yellow>{player}</yellow>:</gold>"
+  debug-homes: "<gray>- homes cached: <white>{count}</white> of <white>{limit}</white></gray>"
+  debug-delay: "<gray>- countdown running: <white>{active}</white></gray>"
+  debug-immunity: "<gray>- damage immunity: <white>{active}</white></gray>"
+  debug-requests: "<gray>- teleport requests: <white>{incoming}</white> in, <white>{outgoing}</white> out</gray>"
+  debug-cooldown: "<gray>- cooldown on <white>{type}</white>: <white>{time}</white>s</gray>"
+
+# /glteleports backup
+backup:
+  started: "<yellow>Writing a backup...</yellow>"
+  finished: "<green>Backup written to <yellow>{file}</yellow>.</green>"
+  failed: "<red>The backup could not be written. Check the console.</red>"
+
+# Command usage lines, shown when a command is used incorrectly.
+# Single-quoted so the backslashes survive YAML: \< escapes the angle bracket for MiniMessage,
+# which would otherwise try to read <name> as a tag.
+usage:
+  glteleports: '<gray>/glteleports \<reload|backup|status|debug|history|lock|unlock|locks|version></gray>'
+  sethome: '<gray>/sethome [name]  |  /sethome \<player>:\<home> (staff)</gray>'
+  home: '<gray>/home \<name></gray>'
+  renamehome: '<gray>/renamehome \<old> \<new></gray>'
+  movehome: '<gray>/movehome \<name></gray>'
+  delhome: '<gray>/delhome \<name>  |  /delhome \<player>:\<home> (staff)</gray>'
+  listhomes: '<gray>/listhomes [player]</gray>'
+  setwarp: '<gray>/setwarp \<name> [permission]</gray>'
+  warp: '<gray>/warp \<name></gray>'
+  warps: '<gray>/warps [page]</gray>'
+  editwarp: '<gray>/editwarp \<name> \<permission|cost|cooldown|delay> [value|default]</gray>'
+  delwarp: '<gray>/delwarp \<name></gray>'
+  setspawn: '<gray>/setspawn</gray>'
+  spawn: '<gray>/spawn</gray>'
+  tpa: '<gray>/tpa \<player></gray>'
+  tpahere: '<gray>/tpahere \<player></gray>'
+  tpaccept: '<gray>/tpaccept [player]</gray>'
+  tpdeny: '<gray>/tpdeny [player]</gray>'
+  tpacancel: '<gray>/tpacancel [player]</gray>'
+  tpatoggle: '<gray>/tpatoggle</gray>'
+  tpablock: '<gray>/tpablock \<add|remove|list> [player]</gray>'
+  homes: '<gray>/homes</gray>'
+  homeinvite: '<gray>/homeinvite \<player> \<home> [duration]</gray>'
+  homeuninvite: '<gray>/homeuninvite \<player> \<home></gray>'
+  homeinvites: '<gray>/homeinvites [received|given]</gray>'

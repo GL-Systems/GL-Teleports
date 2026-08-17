@@ -9,6 +9,7 @@ repositories {
     mavenCentral()
     maven("https://jitpack.io")
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.extendedclip.com/releases/")
 }
 
 dependencies {
@@ -22,10 +23,9 @@ dependencies {
         exclude(group = "org.bukkit", module = "bukkit")
     }
 
-    // Connection pool and JDBC/Mongo drivers are compile-only and declared under
-    // `libraries:` in plugin.yml instead of being shaded: the server downloads only what
-    // the configured backend needs, and Paper's per-plugin library classloader keeps
-    // another plugin's copy from winning the load order.
+    // Soft dependency: the expansion is only touched when the plugin is present at runtime.
+    compileOnly(libs.placeholderapi)
+
     compileOnly(libs.hikaricp)
     compileOnly(libs.sqlite.jdbc)
     compileOnly(libs.h2)
@@ -34,6 +34,8 @@ dependencies {
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
+
+    testImplementation(libs.snakeyaml)
 }
 
 java {
@@ -43,6 +45,7 @@ java {
 tasks {
     test {
         useJUnitPlatform()
+        dependsOn(processResources)
     }
 
     runServer {
@@ -57,8 +60,18 @@ tasks {
         }
     }
 
+    jar {
+        archiveClassifier = "plain"
+    }
+
     shadowJar {
+        archiveClassifier = ""
+
         relocate("redis.clients.jedis", "org.glstudio.teleports.libs.jedis")
         mergeServiceFiles()
+    }
+
+    build {
+        dependsOn(shadowJar)
     }
 }

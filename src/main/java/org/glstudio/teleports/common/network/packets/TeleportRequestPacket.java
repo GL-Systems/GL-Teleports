@@ -11,7 +11,6 @@ import java.util.UUID;
 
 @Getter
 public class TeleportRequestPacket extends Packet {
-
     private final String sourceServer;
     private final String sourceInstance;
     private final String targetServer;
@@ -49,6 +48,11 @@ public class TeleportRequestPacket extends Packet {
 
     public PendingTeleport toPendingTeleport(long expiresAt) {
         return new PendingTeleport(teleportType, world, x, y, z, yaw, pitch, expiresAt);
+    }
+
+    @Override
+    public String destinationServer() {
+        return targetServer;
     }
 
     @Override

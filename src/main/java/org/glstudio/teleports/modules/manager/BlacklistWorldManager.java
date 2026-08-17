@@ -1,12 +1,15 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.core.Permissions;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 
 import java.util.List;
 
 public class BlacklistWorldManager {
+    public static final String BYPASS_PERMISSION = Permissions.BYPASS_BLACKLIST;
 
     private final GTeleports plugin;
 
@@ -14,15 +17,26 @@ public class BlacklistWorldManager {
         this.plugin = plugin;
     }
 
-    public boolean isBlacklisted(World world, TeleportType type) {
-        String path = "blacklist." + type.getConfigKey();
-        List<String> blacklistedWorlds = plugin.getConfigManager().getMainConfig().getStringList(path);
+    public boolean isBlacklisted(Player player, World world, TeleportType type) {
+        if (world == null) {
+            return false;
+        }
 
-        return blacklistedWorlds.contains(world.getName());
+        if (player != null && player.hasPermission(BYPASS_PERMISSION)) {
+            return false;
+        }
+
+        for (String blacklisted : getBlacklistedWorlds(type)) {
+            if (blacklisted.equalsIgnoreCase(world.getName())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public List<String> getBlacklistedWorlds(TeleportType type) {
         String path = "blacklist." + type.getConfigKey();
-        return plugin.getConfigManager().getMainConfig().getStringList(path);
+        return plugin.getSettings().getStringList(path);
     }
 }

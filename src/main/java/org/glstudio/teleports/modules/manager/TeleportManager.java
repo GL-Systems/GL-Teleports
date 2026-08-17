@@ -1,12 +1,18 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.api.Events;
+import org.glstudio.teleports.api.event.PostTeleportEvent;
+import org.glstudio.teleports.api.event.PreTeleportEvent;
+import org.glstudio.teleports.core.TeleportRules;
 import org.glstudio.teleports.modules.model.SafetyCheckResult;
+import org.glstudio.teleports.modules.model.TeleportDestination;
 import org.glstudio.teleports.modules.model.TeleportResult;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.utils.LoggerUtils;
 
 import java.util.Map;
 import java.util.UUID;
@@ -14,7 +20,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class TeleportManager {
-
     private final GTeleports plugin;
     private final Map<UUID, Long> immunityMap;
 
@@ -24,172 +29,263 @@ public class TeleportManager {
     }
 
     public void requestTeleport(Player player, Location destination, TeleportType type, Consumer<Boolean> callback) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            TeleportResult result = checkRequirements(player, destination, type);
+        requestTeleport(player, destination, type, null, null, callback);
+    }
 
-            if (!result.isSuccess()) {
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    String message = plugin.getConfigManager().getLanguageConfig().getString("errors." + result.getMessage());
-                    if (message != null && !message.isEmpty()) {
-                        player.sendMessage(message);
-                    }
-                    callback.accept(false);
-                });
-                return;
-            }
+    public void requestTeleport(Player player, Location destination, TeleportType type,
+                                TeleportDestination destinationObject, String destinationName,
+                                Consumer<Boolean> callback) {
+        TeleportRules rules = TeleportRules.resolve(plugin, player, type, destinationObject);
 
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!applyCost(player, type)) {
-                    String message = plugin.getConfigManager().getLanguageConfig().getString("errors.insufficient-funds");
-                    if (message != null && !message.isEmpty()) {
-                        player.sendMessage(message.replace("{cost}",
-                                plugin.getEconomyManager().formatCost(type)));
-                    }
-                    callback.accept(false);
-                    return;
-                }
+        run(player, destination, type, rules, destinationName, true, callback,
+                target -> completeTeleport(player, target, type, rules, destinationName, callback));
+    }
 
-                plugin.getDelayManager().startDelay(player, destination, type, () -> {
-                    completeTeleport(player, destination, type, callback);
-                });
-            });
+    public void requestRemoteTeleport(Player player, TeleportType type, Runnable onReady) {
+        requestRemoteTeleport(player, type, null, null, onReady);
+    }
+
+    public void requestRemoteTeleport(Player player, TeleportType type,
+                                      TeleportDestination destinationObject, String destinationName,
+                                      Runnable onReady) {
+        TeleportRules rules = TeleportRules.resolve(plugin, player, type, destinationObject);
+
+        run(player, player.getLocation(), type, rules, destinationName, false, success -> {
+        }, target -> {
+            plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT);
+            setCooldown(player, type, rules);
+            onReady.run();
         });
     }
 
-    private TeleportResult checkRequirements(Player player, Location destination, TeleportType type) {
-        if (plugin.getCooldownManager().hasCooldown(player, type)) {
-            long remaining = plugin.getCooldownManager().getRemainingCooldown(player, type);
-            return TeleportResult.failure("cooldown");
+    private void run(Player player, Location destination, TeleportType type, TeleportRules rules,
+                     String destinationName, boolean inspectDestination,
+                     Consumer<Boolean> callback, Consumer<Location> onReady) {
+        TeleportResult result = checkRequirements(player, destination, type, rules, inspectDestination);
+
+        if (!result.isSuccess()) {
+            plugin.getMessages().send(player, "errors." + result.getMessage(), result.getPlaceholders());
+            plugin.getHistoryManager().recordFailure(player, type, destinationName,
+                    player.getLocation(), result.getMessage());
+            callback.accept(false);
+            return;
         }
 
-        if (plugin.getBlacklistWorldManager().isBlacklisted(destination.getWorld(), type)) {
+        Location target = destination;
+
+        if (inspectDestination) {
+            target = plugin.getTeleportSafetyManager().resolve(player, destination, type);
+
+            if (target == null) {
+                SafetyCheckResult safety = plugin.getTeleportSafetyManager().checkSafety(destination, type);
+                plugin.getMessages().send(player, "errors.unsafe-location." + safety.getReason());
+                plugin.getHistoryManager().recordFailure(player, type, destinationName,
+                        player.getLocation(), "unsafe-" + safety.getReason());
+                callback.accept(false);
+                return;
+            }
+        }
+
+        Location resolved = target;
+
+        plugin.getDelayManager().startDelay(player, resolved, type, rules.delaySeconds(), () -> {
+            if (!player.isOnline()) {
+                callback.accept(false);
+                return;
+            }
+
+            if (!chargeOrExplain(player, type, rules)) {
+                callback.accept(false);
+                return;
+            }
+
+            onReady.accept(resolved);
+        });
+    }
+
+    private TeleportResult checkRequirements(Player player, Location destination, TeleportType type,
+                                             TeleportRules rules, boolean inspectDestination) {
+        if (plugin.getCooldownManager().hasCooldown(player, type)) {
+            long remaining = plugin.getCooldownManager().getRemainingCooldown(player, type);
+            return TeleportResult.failure("cooldown", "{time}", String.valueOf(remaining));
+        }
+
+        if (inspectDestination
+                && plugin.getBlacklistWorldManager().isBlacklisted(player, destination.getWorld(), type)) {
             return TeleportResult.failure("world-blacklisted");
         }
 
-        SafetyCheckResult safetyResult = plugin.getTeleportSafetyManager().checkSafety(destination, type);
-        if (!safetyResult.isSafe()) {
-            return TeleportResult.failure("unsafe-location." + safetyResult.getReason());
-        }
-
-        if (plugin.getEconomyManager().isEnabled() &&
-                !plugin.getEconomyManager().hasEnoughMoney(player, type)) {
-            return TeleportResult.failure("insufficient-funds");
+        if (!plugin.getEconomyManager().hasEnoughMoney(player, rules.cost())) {
+            return TeleportResult.failure("insufficient-funds",
+                    "{cost}", plugin.getEconomyManager().formatCost(rules.cost()));
         }
 
         return TeleportResult.success();
     }
 
-    private boolean applyCost(Player player, TeleportType type) {
-        if (!plugin.getEconomyManager().isEnabled()) {
-            return true;
-        }
-
-        return plugin.getEconomyManager().takeMoney(player, type);
+    public void refund(Player player, TeleportType type) {
+        refund(player, type, TeleportRules.global(plugin, type));
     }
 
-    public void requestRemoteTeleport(Player player, TeleportType type, Runnable onReady) {
-        if (plugin.getCooldownManager().hasCooldown(player, type)) {
-            sendError(player, "errors.cooldown", plugin.getCooldownManager().getRemainingCooldown(player, type));
-            return;
-        }
+    public void refund(Player player, TeleportType type, TeleportRules rules) {
+        plugin.getCooldownManager().removeCooldown(player, type);
 
-        if (plugin.getEconomyManager().isEnabled()
-                && !plugin.getEconomyManager().hasEnoughMoney(player, type)) {
-            sendCostError(player, type);
-            return;
+        if (plugin.getEconomyManager().refund(player, rules.cost())) {
+            plugin.getMessages().send(player, "teleport.refunded",
+                    "{cost}", plugin.getEconomyManager().formatCost(rules.cost()));
         }
-
-        if (!applyCost(player, type)) {
-            sendCostError(player, type);
-            return;
-        }
-
-        plugin.getDelayManager().startDelay(player, player.getLocation(), type, () -> {
-            plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT);
-            plugin.getCooldownManager().setCooldown(player, type);
-            onReady.run();
-        });
     }
 
-    public void completeArrival(Player player, Location destination, TeleportType type) {
-        SafetyCheckResult safetyResult = plugin.getTeleportSafetyManager().checkSafety(destination, type);
-        if (!safetyResult.isSafe()) {
-            String message = plugin.getConfigManager().getLanguageConfig()
-                    .getString("errors.unsafe-location." + safetyResult.getReason());
-            if (message != null && !message.isEmpty()) {
-                player.sendMessage(message);
+    public Location completeArrival(Player player, Location destination, TeleportType type) {
+        if (plugin.getBlacklistWorldManager().isBlacklisted(player, destination.getWorld(), type)) {
+            LoggerUtils.logWarn("Not placing " + player.getName() + " at their " + type
+                    + " destination: world '" + destination.getWorld().getName() + "' is in blacklist."
+                    + type.getConfigKey() + " on this server.");
+            plugin.getMessages().send(player, "errors.world-blacklisted");
+            return null;
+        }
+
+        Location target = plugin.getTeleportSafetyManager().resolve(player, destination, type);
+        if (target == null) {
+            SafetyCheckResult safety = plugin.getTeleportSafetyManager().checkSafety(destination, type);
+
+            LoggerUtils.logWarn("Not placing " + player.getName() + " at their " + type + " destination ("
+                    + destination.getWorld().getName() + " " + Math.round(destination.getX()) + " "
+                    + Math.round(destination.getY()) + " " + Math.round(destination.getZ())
+                    + "): the safety check reports '" + safety.getReason() + "' and nothing within "
+                    + "safety.relocate-radius is better. They have been left where they landed.");
+
+            plugin.getMessages().send(player, "errors.unsafe-location." + safety.getReason());
+            return null;
+        }
+
+        Location origin = player.getLocation().clone();
+
+        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT_ARRIVE);
+        plugin.getEffectManager().clearBossBar(player);
+
+        player.teleport(target);
+
+        applyImmunity(player, type);
+
+        plugin.getMessages().send(player, "teleport.success");
+
+        Events.call(new PostTeleportEvent(player, type, origin, target, null, true));
+        return target;
+    }
+
+    public void completePlacedArrival(Player player, Location destination, TeleportType type) {
+        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT_ARRIVE);
+        plugin.getEffectManager().clearBossBar(player);
+
+        applyImmunity(player, type);
+
+        plugin.getMessages().send(player, "teleport.success");
+
+        Events.call(new PostTeleportEvent(player, type, destination, destination, null, true));
+    }
+
+    private void completeTeleport(Player player, Location destination, TeleportType type,
+                                  TeleportRules rules, String destinationName, Consumer<Boolean> callback) {
+        Location origin = player.getLocation().clone();
+
+        PreTeleportEvent event = new PreTeleportEvent(player, type, origin, destination, destinationName);
+
+        if (!Events.callAndExplain(event, player, event.getCancelMessage())) {
+            plugin.getEffectManager().clearBossBar(player);
+            plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.CANCELLED);
+            plugin.getEconomyManager().refund(player, rules.cost());
+            plugin.getHistoryManager().recordFailure(player, type, destinationName, origin, "CANCELLED_BY_PLUGIN");
+            callback.accept(false);
+            return;
+        }
+
+        Location target = event.getDestination() == null ? destination : event.getDestination();
+
+        Location safe = plugin.getTeleportSafetyManager().resolve(player, target, type);
+        Location finalTarget = safe == null ? target : safe;
+
+        ChunkPreloader.prepare(plugin, finalTarget).thenRun(() -> Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) {
+                callback.accept(false);
+                return;
             }
-            return;
-        }
 
+            plugin.getTeleportQueue().submit(player,
+                    () -> move(player, origin, finalTarget, type, rules, destinationName, callback));
+        }));
+    }
+
+    private void move(Player player, Location origin, Location destination, TeleportType type,
+                      TeleportRules rules, String destinationName, Consumer<Boolean> callback) {
         plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT);
+        plugin.getEffectManager().clearBossBar(player);
 
         player.teleport(destination);
 
-        applyImmunity(player, type);
+        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT_ARRIVE);
 
-        String message = plugin.getConfigManager().getLanguageConfig().getString("teleport.success");
-        if (message != null && !message.isEmpty()) {
-            player.sendMessage(message);
-        }
-    }
-
-    private void sendError(Player player, String path, long time) {
-        String message = plugin.getConfigManager().getLanguageConfig().getString(path);
-        if (message != null && !message.isEmpty()) {
-            player.sendMessage(message.replace("{time}", String.valueOf(time)));
-        }
-    }
-
-    private void sendCostError(Player player, TeleportType type) {
-        String message = plugin.getConfigManager().getLanguageConfig().getString("errors.insufficient-funds");
-        if (message != null && !message.isEmpty()) {
-            player.sendMessage(message.replace("{cost}", plugin.getEconomyManager().formatCost(type)));
-        }
-    }
-
-    private void completeTeleport(Player player, Location destination, TeleportType type, Consumer<Boolean> callback) {
-        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT);
-
-        player.teleport(destination);
-
-        plugin.getCooldownManager().setCooldown(player, type);
+        setCooldown(player, type, rules);
 
         applyImmunity(player, type);
 
-        String message = plugin.getConfigManager().getLanguageConfig().getString("teleport.success");
-        if (message != null && !message.isEmpty()) {
-            player.sendMessage(message);
-        }
+        plugin.getMessages().send(player, "teleport.success");
+
+        plugin.getHistoryManager().record(player, type, destinationName, origin, destination, rules.cost());
+        Events.call(new PostTeleportEvent(player, type, origin, destination, destinationName, false));
 
         callback.accept(true);
     }
 
+    private void setCooldown(Player player, TeleportType type, TeleportRules rules) {
+        plugin.getCooldownManager().setCooldown(player, type, rules.cooldownSeconds());
+
+        if (rules.cooldownSeconds() > 0) {
+            plugin.getEffectManager().playTeleportEffects(player, type,
+                    EffectManager.EffectStage.COOLDOWN_START);
+        }
+    }
+
+    private boolean chargeOrExplain(Player player, TeleportType type, TeleportRules rules) {
+        if (plugin.getEconomyManager().takeMoney(player, rules.cost())) {
+            return true;
+        }
+
+        plugin.getMessages().send(player, "errors.insufficient-funds",
+                "{cost}", plugin.getEconomyManager().formatCost(rules.cost()));
+        plugin.getEffectManager().clearBossBar(player);
+        return false;
+    }
+
     private void applyImmunity(Player player, TeleportType type) {
         String path = "teleport-settings." + type.getConfigKey() + ".immunity";
-        int immunityTicks = plugin.getConfigManager().getMainConfig().getInt(path, 0);
+        int immunityTicks = plugin.getSettings().getInt(path, 0);
 
         if (immunityTicks > 0) {
             immunityMap.put(player.getUniqueId(), System.currentTimeMillis() + (immunityTicks * 50L));
 
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                immunityMap.remove(player.getUniqueId());
-            }, immunityTicks);
+            Bukkit.getScheduler().runTaskLater(plugin, () ->
+                    immunityMap.remove(player.getUniqueId()), immunityTicks);
         }
     }
 
     public boolean hasImmunity(Player player) {
-        if (!immunityMap.containsKey(player.getUniqueId())) {
+        Long immunityEnd = immunityMap.get(player.getUniqueId());
+
+        if (immunityEnd == null) {
             return false;
         }
 
-        long immunityEnd = immunityMap.get(player.getUniqueId());
         if (System.currentTimeMillis() >= immunityEnd) {
             immunityMap.remove(player.getUniqueId());
             return false;
         }
 
         return true;
+    }
+
+    public void forget(UUID uuid) {
+        immunityMap.remove(uuid);
     }
 
     public void safeDisable() {

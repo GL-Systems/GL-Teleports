@@ -16,6 +16,10 @@ public enum DatabaseType {
         this.name = name;
     }
 
+    public boolean isShared() {
+        return this == MYSQL || this == MONGO;
+    }
+
     public static DatabaseType fromString(String type) {
         for (DatabaseType dbType : values()) {
             if (dbType.name.equalsIgnoreCase(type)) {

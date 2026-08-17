@@ -1,6 +1,5 @@
 package org.glstudio.teleports.modules.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bukkit.Bukkit;
@@ -8,10 +7,8 @@ import org.bukkit.Location;
 import org.bukkit.World;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 public class PendingTeleport {
-
     private TeleportType type;
     private String world;
     private double x;
@@ -20,6 +17,22 @@ public class PendingTeleport {
     private float yaw;
     private float pitch;
     private long expiresAt;
+
+    private transient Location resolved;
+
+    private transient boolean placedAtLogin;
+
+    public PendingTeleport(TeleportType type, String world, double x, double y, double z,
+                           float yaw, float pitch, long expiresAt) {
+        this.type = type;
+        this.world = world;
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.yaw = yaw;
+        this.pitch = pitch;
+        this.expiresAt = expiresAt;
+    }
 
     public Location toLocation() {
         World bukkitWorld = Bukkit.getWorld(world);

@@ -3,8 +3,9 @@ package org.glstudio.teleports.core;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
 
-public class ShutdownService {
+import java.util.concurrent.TimeUnit;
 
+public class ShutdownService {
     private final GTeleports plugin;
 
     public ShutdownService(GTeleports plugin) {
@@ -13,8 +14,10 @@ public class ShutdownService {
 
     public void shutdown() {
         try {
+            unregisterCommands();
             disableManagers();
             closeMultiServer();
+            drainPendingWork();
             closeDatabase();
 
             LoggerUtils.logSuccess("Services shut down cleanly.");
@@ -25,7 +28,39 @@ public class ShutdownService {
         LoggerUtils.sendDisable(plugin);
     }
 
+    private void unregisterCommands() {
+        if (plugin.getCommandRegistry() != null) {
+            plugin.getCommandRegistry().unregisterAll();
+        }
+    }
+
+    private void drainPendingWork() {
+        if (plugin.getExecutors() != null) {
+            plugin.getExecutors().shutdown();
+        }
+    }
+
     private void disableManagers() {
+        if (plugin.getMenuManager() != null) {
+            plugin.getMenuManager().closeAll();
+        }
+
+        if (plugin.getTeleportQueue() != null) {
+            plugin.getTeleportQueue().safeDisable();
+        }
+
+        if (plugin.getHistoryManager() != null) {
+            plugin.getHistoryManager().safeDisable();
+        }
+
+        if (plugin.getTpaBlockManager() != null) {
+            plugin.getTpaBlockManager().safeDisable();
+        }
+
+        if (plugin.getLockManager() != null) {
+            plugin.getLockManager().safeDisable();
+        }
+
         if (plugin.getHomeManager() != null) {
             plugin.getHomeManager().safeDisable();
         }
@@ -60,6 +95,22 @@ public class ShutdownService {
     }
 
     private void closeMultiServer() {
+
+        if (plugin.getCrossServerManager() != null) {
+            try {
+                plugin.getCrossServerManager().announcePresence(false).get(2, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                LoggerUtils.logDebug("ShutdownService", "Could not announce this server as offline: "
+                        + e.getMessage());
+            }
+        }
+
+        if (plugin.getMultiServerSupervisor() != null) {
+            plugin.getMultiServerSupervisor().stop();
+        }
+
         if (plugin.getCrossServerManager() != null) {
             plugin.getCrossServerManager().safeDisable();
         }
@@ -69,11 +120,13 @@ public class ShutdownService {
         }
 
         if (plugin.getRedisService() != null) {
-            plugin.getRedisService().close().join();
-        }
-
-        if (plugin.getExecutors() != null) {
-            plugin.getExecutors().shutdown();
+            try {
+                plugin.getRedisService().close().get(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                LoggerUtils.logWarn("Redis did not close cleanly: " + e.getMessage());
+            }
         }
     }
 

@@ -9,7 +9,6 @@ import org.bukkit.entity.Player;
 import java.util.List;
 
 public class TpAcceptCommand extends Command {
-
     private final GTeleports plugin;
 
     public TpAcceptCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
@@ -19,22 +18,31 @@ public class TpAcceptCommand extends Command {
 
     @Override
     public List<String> aliases() {
-        return List.of("tpaccept");
+        return List.of("tpyes", "tpay");
     }
 
     @Override
     public List<String> usage() {
-        return List.of("/tpaccept [jugador]");
+        return List.of(plugin.getMessages().raw("usage.tpaccept"));
     }
 
     @Override
     public void execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sendMessage(sender, plugin.getConfigManager().getLanguageConfig().getString("errors.player-only"));
+            plugin.getMessages().send(sender, "errors.player-only");
             return;
         }
 
         String requesterName = args.length > 0 ? args[0] : null;
         plugin.getTpaManager().acceptRequest(player, requesterName);
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, String[] args) {
+        if (args.length != 1 || !(sender instanceof Player player)) {
+            return List.of();
+        }
+
+        return filterTabCompletion(plugin.getTpaManager().pendingRequesterNames(player), args[0]);
     }
 }

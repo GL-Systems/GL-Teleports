@@ -1,57 +1,93 @@
 # GoldenTeleports Configuration
 # Main configuration file
 
+# Bumped whenever a release changes the shape of this file. The plugin compares it against the
+# version it expects and says so on startup when they differ, so a stale file is noticed then
+# rather than through whichever setting quietly stopped applying.
+config-version: 1
+
 # Cross-server homes, warps and spawn.
 #
-# Every home, warp and spawn is saved with the name of the server it was created on. When a
-# player teleports to one that lives elsewhere, this server announces the destination over
-# Redis and then asks the proxy to move the connection; the destination server places them on
+# Every home and warp is saved with the name of the server it was created on, and the network
+# has a single spawn - /setspawn anywhere replaces it, and /spawn everywhere leads to it. When a
+# player teleports to a destination that lives elsewhere, this server announces it over Redis
+# and then asks the proxy to move the connection; the destination server places them on
 # arrival. Requires a shared database (see database.yml: use mysql or mongo, not yaml) and a
 # proxy (BungeeCord/Velocity).
-MULTI_SERVER:
-  ENABLED: false
+multi-server:
+  enabled: false
 
   # Must match the name this server has in the proxy's config, since that is the name used to
   # transfer players to it. Give each server a distinct value.
-  SERVER_NAME: "server-1"
+  server-name: "server-1"
 
-  REDIS:
+  redis:
     # Servers that share a channel route teleports to each other. Use different channels to
     # keep two networks apart on the same Redis instance.
-    CHANNEL: "gl-teleports"
+    channel: "gl-teleports"
 
     # Values support ${ENV_VAR} substitution so secrets can live outside this file.
-    HOST: "localhost"
-    PORT: 6379
-    PASSWORD: ""
+    host: "localhost"
+    port: 6379
+    password: ""
     # Refuse to start the bus with an empty password unless this is explicitly set to true.
-    ALLOW_INSECURE: false
+    allow-insecure: false
 
-  # HMAC secret shared by all servers on the channel. Leave empty to disable signing
-  # (NOT recommended: anyone able to publish to Redis could move players at will).
-  SECRET: ""
+  # HMAC secret shared by every server on the channel, at least 32 characters. Required when
+  # enabled is true: without it any client that can publish to Redis could move players at will.
+  # Supports ${ENV_VAR} so it can live outside this file.
+  secret: ""
 
-  # Ticks to wait after the transferred player joins before placing them. Raise it if another
-  # plugin moves players on join, or the teleport lands first and gets overwritten.
-  ARRIVAL_DELAY: 30
+  # Ticks to wait before placing a transferred player - the fallback path only.
+  #
+  # Arrivals are normally settled during login, before the world is sent to the client, so the
+  # player simply appears at their destination with nothing to wait for and nothing to correct.
+  # This delay applies only when the destination arrived too late for that: Redis lagging behind
+  # the proxy, or a destination server that was still starting up. Then a real teleport is needed,
+  # and this is how long to let other plugins finish with the player first.
+  #
+  # Leave it at 0 unless you see arrivals being overwritten by another plugin.
+  arrival-delay: 0
+
+  # Seconds a destination waits for its player before it is discarded. It must outlast the
+  # slowest transfer the proxy might make: a destination server that is still starting up can
+  # easily take longer than a minute, and an expired destination drops the teleport.
+  pending-expiry-seconds: 120
 
   # Retry policy for failed publishes (non-blocking backoff).
-  RETRY:
-    ATTEMPTS: 3
-    BACKOFF_MS: 100
+  retry:
+    attempts: 3
+    backoff-ms: 100
 
 # Home limits
 home-limits:
   default: 3
   permissions:
-    vip: 5      # golden.teleports.homes.limit.vip
-    staff: 10   # golden.teleports.homes.limit.staff
-    owner: -1   # golden.teleports.homes.limit.owner (-1 = unlimited)
+    vip: 5      # golden.teleports.home.limit.vip
+    staff: 10   # golden.teleports.home.limit.staff
+    owner: -1   # golden.teleports.home.limit.owner (-1 = unlimited)
+
+  # Caps that apply on top of the total above, not instead of it. A player at 3 of 3 homes is
+  # still at their limit whatever these say; these only add a second, narrower ceiling.
+  #
+  # This is what lets you write "three homes, at most one of them in the nether". The world
+  # blacklist cannot: it forbids the world outright rather than limiting it.
+  #
+  # World names are matched in lower case. A world or server not listed here has no extra cap.
+  per-world: {}
+  #  world_nether: 1
+  #  world_the_end: 0
+
+  per-server: {}
+  #  events: 0
+  #  survival: 3
 
 # Teleport settings
 teleport-settings:
   # General settings
-  move-threshold: 0.1
+  # How far a player may drift during a countdown before it is cancelled, in blocks, measured
+  # from where they started rather than between ticks.
+  move-threshold: 0.5
   cancel-on-damage: true
 
   # Home teleportation
@@ -61,7 +97,6 @@ teleport-settings:
     cost: 100.0               # Cost in economy (0.0 for free)
     immunity: 60              # Damage immunity in ticks after teleport (20 ticks = 1 second)
     cancel-on-move: true      # Cancel if player moves during delay
-    effects: true             # Enable effects
 
   # Warp teleportation
   warp:
@@ -70,7 +105,6 @@ teleport-settings:
     cost: 50.0
     immunity: 20
     cancel-on-move: false
-    effects: true
 
   # TPA teleportation
   tpa:
@@ -80,8 +114,8 @@ teleport-settings:
     immunity: 0
     request-timeout: 30       # Time in seconds before request expires
     priority: "recent"        # "recent" or "oldest" - which request to accept/deny first
+    max-outgoing: 5           # How many requests one player may have waiting at once
     cancel-on-move: true
-    effects: true
 
   # TPA Here teleportation
   tpahere:
@@ -91,7 +125,6 @@ teleport-settings:
     immunity: 0
     request-timeout: 30
     cancel-on-move: true
-    effects: true
 
   # Spawn teleportation
   spawn:
@@ -100,7 +133,6 @@ teleport-settings:
     cost: 0.0
     immunity: 30
     cancel-on-move: true
-    effects: true
 
 # World blacklist per teleport type
 blacklist:
@@ -117,14 +149,34 @@ blacklist:
 # Safety checks for teleportation
 safety:
   enabled: true
-  min-height: 0
-  max-height: 320
-  check-radius: 2
+
+  # Height bounds. Left out, each world's own limits are used - which is almost always what you
+  # want, since a fixed floor of 0 rejects everything below sea level in a 1.18+ world. Set them
+  # only to tighten the range further; they are never allowed to widen it.
+  # min-height: -64
+  # max-height: 320
+
+  check-radius: 1
   check-lava: true
   check-suffocation: true
   check-water-trap: true
   require-floor: true
   max-search-down: 5
+
+  # When the destination is unsafe, look for a safe spot directly above or below it rather than
+  # refusing outright. Without this, a home that happens to sit somewhere awkward is unreachable.
+  relocate: true
+  relocate-radius: 4
+
+  # Damage cancelled while post-teleport immunity lasts. Combat causes are deliberately absent:
+  # including them turns every teleport into an escape with a few seconds of invulnerability.
+  immunity-causes:
+    - "FALL"
+    - "SUFFOCATION"
+    - "FIRE_TICK"
+    - "HOT_FLOOR"
+    - "CONTACT"
+    - "CRAMMING"
 
 # Effects configuration
 effects:
@@ -322,6 +374,130 @@ effects:
         fade-in: 10
         stay: 40
         fade-out: 10
+
+# Where each player was standing, remembered per server.
+#
+# Read when somebody arrives on a server with no teleport waiting for them - a plain /server
+# switch, a hub button, the proxy moving them after a restart - so they land where they left
+# rather than on the world spawn. A warp, home, spawn or accepted teleport request already says
+# where the player should end up, and takes precedence.
+last-location:
+  enabled: true
+
+  # Quitting saves too. This bounds how much is forgotten when a server stops without one.
+  save-interval-seconds: 60
+
+  # Extra time to wait before restoring, after Redis has confirmed there is no teleport waiting.
+  #
+  # The confirmation is waited for either way, so this is not a race against the lookup - it is
+  # only a pause to let plugins that move players on join finish first. 0 means restore as soon as
+  # the answer comes back, which is what you want unless something else is fighting over the
+  # player's position.
+  arrival-grace-seconds: 0
+
+  # Never saved from, and never restored into. Useful for minigame or event worlds where the
+  # position means nothing once the round is over.
+  excluded-worlds: []
+
+# Periodic JSON snapshots of warps, spawn and the homes of online players, written to
+# plugins/GL-Teleports/backups/. Backend-independent, so a snapshot can be read back whichever
+# storage is configured.
+backups:
+  enabled: true
+  interval-minutes: 360
+  keep: 10
+
+# What happens when a player dies.
+spawn:
+  # Respawn at the spawn set with /setspawn instead of at the world spawn.
+  #
+  # Applied by answering the respawn event, not by teleporting afterwards, so the player only ever
+  # appears in one place - no flicker and no second set of chunks loaded.
+  #
+  # Off by default: it changes behaviour every server already has, so it should be a choice.
+  respawn-at-spawn: false
+
+  # Let beds and respawn anchors win.
+  #
+  # A bed is the player's own deliberate answer to "where do I wake up", and overriding it makes
+  # the block pointless. Set this to false if you want everybody funnelled through spawn whatever
+  # they slept in.
+  respawn-respects-bed: true
+
+  # Note: this only applies on the server that actually holds the network spawn. It never moves
+  # anybody across the network, because a death is a bad moment to hand a player to a proxy -
+  # everywhere else players keep respawning at the world spawn.
+
+# The /homes inventory menu.
+#
+# Turning this off does not remove the command: /homes then falls back to the chat listing,
+# which is also always available as /listhomes and is what console gets either way.
+#
+# Layout, icons and wording live in menus/teleports-homes.yml.
+#
+# /warps has no menu; it prints its paged list.
+menus:
+  enabled: true
+
+# A record of every teleport that happened.
+#
+# The only way to answer "how did this player get into my base". Nothing else in the plugin
+# remembers where somebody came from, and a cross-server teleport that goes wrong is otherwise
+# invisible - the player is simply somewhere unexpected and nobody can say why.
+history:
+  enabled: true
+
+  # Records older than this are discarded by an hourly sweep. The log is the one table here that
+  # grows without bound, and on the yaml backend the whole file is parsed on every read - so if
+  # you are on yaml and busy, keep this short rather than long.
+  retention-days: 30
+
+  # Also record teleports that were refused: cooldowns, unsafe destinations, blacklisted worlds,
+  # plugins cancelling them. Useful when diagnosing "it just does nothing", noisy otherwise.
+  log-failures: false
+
+# Homes one player has let another use, via /homeinvite.
+home-shares:
+  enabled: true
+
+  # How many people one home may be shared with at a time. Expired grants do not count.
+  max-per-home: 10
+
+# Per-player /tpablock lists, alongside the all-or-nothing /tpatoggle.
+tpa-blocks:
+  enabled: true
+  max-entries: 50
+
+cooldowns:
+  # Store cooldowns in Redis so they follow a player across the network.
+  #
+  # Without this, changing server resets every cooldown - one hop and a warp is usable again.
+  # Reads still come from local memory, so this costs nothing on the teleport path; the shared
+  # copy is written alongside and read back when the player joins somewhere else.
+  #
+  # Ignored entirely when multi-server is off.
+  network: true
+
+# Protection against everybody teleporting at once, which is what a restart looks like.
+queue:
+  # Each teleport can load a chunk, and a chunk load is main-thread work. Two hundred players
+  # running /spawn in the same second lands as two hundred chunk loads in one tick without this.
+  enabled: true
+
+  # How many teleports may execute per tick. The rest wait a tick or two; nothing is dropped.
+  max-per-tick: 4
+
+  # Above this many waiting, players are told they are queued. Below it the wait is imperceptible
+  # and a message would just be noise.
+  notice-threshold: 20
+
+performance:
+  # Load the destination chunk off-thread before moving the player into it.
+  #
+  # player.teleport() into an unloaded chunk loads it synchronously, stopping the server while it
+  # happens. Doing it in advance turns a visible stutter into a wait nobody feels. Falls back to
+  # the old behaviour if the load times out, so the teleport always happens either way.
+  preload-chunks: true
 
 # Miscellaneous settings
 clear-cooldowns-on-quit: false

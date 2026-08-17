@@ -1,10 +1,10 @@
 package org.glstudio.teleports.modules.command.home;
 
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.core.Failures;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.UUID;
 
 public class ListHomesCommand extends Command {
-
     private final GTeleports plugin;
 
     public ListHomesCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
@@ -27,7 +26,7 @@ public class ListHomesCommand extends Command {
 
     @Override
     public List<String> usage() {
-        return List.of("/listhomes [usuario]");
+        return List.of(plugin.getMessages().raw("usage.listhomes"));
     }
 
     @Override
@@ -37,48 +36,53 @@ public class ListHomesCommand extends Command {
                 sendUsage(sender);
                 return;
             }
-            list(sender, player.getUniqueId(), player.getName());
+            list(sender, player.getUniqueId(), player.getName(), true);
             return;
         }
 
-        OfflinePlayer owner = HomeAdmin.resolve(args[0]);
-        if (owner == null) {
-            sendMessage(sender, plugin.getConfigManager().getLanguageConfig().getString("errors.player-never-played")
-                    .replace("{player}", args[0]));
+        if (!sender.hasPermission(HomeAdmin.PERMISSION)) {
+            plugin.getMessages().send(sender, "errors.no-permission");
             return;
         }
 
-        list(sender, owner.getUniqueId(), owner.getName() != null ? owner.getName() : args[0]);
+        Failures.guard(plugin, HomeAdmin.resolve(plugin, args[0]).thenAccept(owner ->
+                plugin.getServer().getScheduler().runTask(plugin, () -> {
+                    if (owner == null) {
+                        plugin.getMessages().send(sender, "errors.player-never-played", "{player}", args[0]);
+                        return;
+                    }
+
+                    list(sender, owner.uuid(), owner.name(), false);
+                })), "ListHomesCommand#resolve", sender);
     }
 
-    private void list(CommandSender sender, UUID owner, String ownerName) {
-        plugin.getHomeManager().getHomes(owner).thenAccept(homes -> {
+    private void list(CommandSender sender, UUID owner, String ownerName, boolean self) {
+        Failures.guard(plugin, plugin.getHomeManager().getHomes(owner).thenAccept(homes -> {
             if (homes.isEmpty()) {
-                sendMessage(sender, plugin.getConfigManager().getLanguageConfig().getString("errors.no-homes-other")
-                        .replace("{player}", ownerName));
+                plugin.getMessages().send(sender, self ? "errors.no-homes" : "errors.no-homes-other",
+                        "{player}", ownerName);
                 return;
             }
 
-            sendMessage(sender, plugin.getConfigManager().getLanguageConfig().getString("home.list-header")
-                    .replace("{player}", ownerName)
-                    .replace("{count}", String.valueOf(homes.size())));
+            plugin.getMessages().send(sender, "home.list-header",
+                    "{player}", ownerName, "{count}", String.valueOf(homes.size()));
 
-            String entry = plugin.getConfigManager().getLanguageConfig().getString("home.list-entry");
             for (Home home : homes) {
-                sendMessage(sender, entry
-                        .replace("{name}", home.getName())
-                        .replace("{world}", home.getWorld())
-                        .replace("{x}", String.valueOf(Math.round(home.getX())))
-                        .replace("{y}", String.valueOf(Math.round(home.getY())))
-                        .replace("{z}", String.valueOf(Math.round(home.getZ())))
-                        .replace("{server}", home.getServer() != null ? home.getServer() : "?"));
+                plugin.getMessages().send(sender, "home.list-entry",
+                        "{name}", home.getName(),
+                        "{world}", home.getWorld() != null ? home.getWorld() : "?",
+                        "{x}", String.valueOf(Math.round(home.getX())),
+                        "{y}", String.valueOf(Math.round(home.getY())),
+                        "{z}", String.valueOf(Math.round(home.getZ())),
+                        "{server}", home.getServer() != null ? home.getServer() : "?");
             }
-        });
+        }), "ListHomesCommand#list", sender);
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, String[] args) {
-        if (args.length != 1 || !(sender instanceof Player player)) {
+        if (args.length != 1 || !(sender instanceof Player player)
+                || !sender.hasPermission(HomeAdmin.PERMISSION)) {
             return List.of();
         }
 

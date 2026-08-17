@@ -11,6 +11,7 @@ import java.util.UUID;
 
 @Getter
 public class TpaResponsePacket extends Packet {
+    private final UUID id;
 
     private final String sourceInstance;
     private final String handlerServer;
@@ -35,10 +36,11 @@ public class TpaResponsePacket extends Packet {
 
     private final long timestamp;
 
-    public TpaResponsePacket(String sourceInstance, String handlerServer, TpaResponse response,
+    public TpaResponsePacket(UUID id, String sourceInstance, String handlerServer, TpaResponse response,
                              UUID requesterUuid, String requesterName, UUID targetUuid,
                              String targetName, String targetServer, TpaRequest.TpaType tpaType,
                              Location accepterLocation) {
+        this.id = id;
         this.sourceInstance = sourceInstance;
         this.handlerServer = handlerServer;
         this.response = response;
@@ -61,6 +63,11 @@ public class TpaResponsePacket extends Packet {
 
     public RemoteDestination toDestination() {
         return new RemoteDestination(targetServer, world, x, y, z, yaw, pitch);
+    }
+
+    @Override
+    public String destinationServer() {
+        return handlerServer;
     }
 
     @Override

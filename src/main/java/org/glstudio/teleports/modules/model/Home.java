@@ -41,14 +41,4 @@ public class Home implements TeleportDestination {
         World bukkitWorld = Bukkit.getWorld(world);
         return bukkitWorld == null ? null : new Location(bukkitWorld, x, y, z, yaw, pitch);
     }
-
-    public void updateLocation(Location location, String server) {
-        this.world = location.getWorld().getName();
-        this.x = location.getX();
-        this.y = location.getY();
-        this.z = location.getZ();
-        this.yaw = location.getYaw();
-        this.pitch = location.getPitch();
-        this.server = server;
-    }
 }

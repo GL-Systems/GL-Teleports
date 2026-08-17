@@ -2,6 +2,7 @@ package org.glstudio.teleports.common.network;
 
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.common.network.packets.CacheInvalidatePacket;
+import org.glstudio.teleports.common.network.packets.ServerPresencePacket;
 import org.glstudio.teleports.common.network.packets.TeleportRequestPacket;
 import org.glstudio.teleports.common.network.packets.TpaRequestPacket;
 import org.glstudio.teleports.common.network.packets.TpaResponsePacket;
@@ -12,16 +13,24 @@ import org.glstudio.teleports.core.TeleportExecutors;
 import org.glstudio.teleports.modules.manager.CrossServerManager;
 import org.glstudio.teleports.modules.manager.TpaManager;
 
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class PacketHandler {
+    private static final long MAX_PACKET_AGE_MS = 30_000L;
+
+    private static final int SEEN_PURGE_THRESHOLD = 512;
+
+    private final Map<UUID, Long> seenPackets = new ConcurrentHashMap<>();
 
     private final MultiServerSettings settings;
     private final TeleportExecutors executors;
     private final RedisService redisService;
 
-    private CrossServerManager crossServerManager;
+    private volatile CrossServerManager crossServerManager;
 
     public PacketHandler(MultiServerSettings settings, TeleportExecutors executors, RedisService redisService) {
         this.settings = settings;
@@ -64,16 +73,22 @@ public class PacketHandler {
         if (packet == null) {
             return;
         }
+
+        if (!accept(packet)) {
+            return;
+        }
+
         try {
             switch (packet.getType()) {
                 case TELEPORT_REQUEST -> handleTeleportRequest((TeleportRequestPacket) packet);
                 case CACHE_INVALIDATE -> handleCacheInvalidate((CacheInvalidatePacket) packet);
+                case SERVER_PRESENCE -> handleServerPresence((ServerPresencePacket) packet);
                 case TPA_REQUEST -> handleTpaRequest((TpaRequestPacket) packet);
                 case TPA_RESPONSE -> handleTpaResponse((TpaResponsePacket) packet);
                 case TPA_TRAVEL -> handleTpaTravel((TpaTravelPacket) packet);
             }
         } catch (Exception e) {
-            LoggerUtils.logError("Failed to handle packet " + packet.getType() + ": " + e.getMessage());
+            LoggerUtils.logException("PacketHandler#handle(" + packet.getType() + ")", e);
         }
     }
 
@@ -104,6 +119,17 @@ public class PacketHandler {
         }
     }
 
+    private void handleServerPresence(ServerPresencePacket packet) {
+        if (packet.getSourceInstance() != null
+                && packet.getSourceInstance().equals(settings.getInstanceId())) {
+            return;
+        }
+
+        if (crossServerManager != null) {
+            crossServerManager.handlePresence(packet);
+        }
+    }
+
     private void handleTpaRequest(TpaRequestPacket packet) {
         if (!addressedToUs(packet.getSourceInstance(), packet.getHandlerServer())) {
             return;
@@ -129,6 +155,28 @@ public class PacketHandler {
         if (tpaManager() != null) {
             tpaManager().handleRemoteTravel(packet);
         }
+    }
+
+    private boolean accept(Packet packet) {
+        if (!packet.isFresh(MAX_PACKET_AGE_MS)) {
+            LoggerUtils.logWarn("Discarded a " + packet.getType() + " packet that is "
+                    + Math.abs(System.currentTimeMillis() - packet.getSentAt()) / 1000
+                    + "s out of date. Check that the servers' clocks agree.");
+            return false;
+        }
+
+        purgeSeen();
+
+        return seenPackets.putIfAbsent(packet.getPacketId(), packet.getSentAt()) == null;
+    }
+
+    private void purgeSeen() {
+        if (seenPackets.size() < SEEN_PURGE_THRESHOLD) {
+            return;
+        }
+
+        long cutoff = System.currentTimeMillis() - MAX_PACKET_AGE_MS;
+        seenPackets.values().removeIf(sentAt -> sentAt < cutoff);
     }
 
     private boolean addressedToUs(String sourceInstance, String handlerServer) {

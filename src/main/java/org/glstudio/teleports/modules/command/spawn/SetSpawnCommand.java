@@ -9,7 +9,6 @@ import org.bukkit.entity.Player;
 import java.util.List;
 
 public class SetSpawnCommand extends Command {
-
     private final GTeleports plugin;
 
     public SetSpawnCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
@@ -24,13 +23,13 @@ public class SetSpawnCommand extends Command {
 
     @Override
     public List<String> usage() {
-        return List.of("/setspawn");
+        return List.of(plugin.getMessages().raw("usage.setspawn"));
     }
 
     @Override
     public void execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sendMessage(sender, plugin.getConfigManager().getLanguageConfig().getString("errors.player-only"));
+            plugin.getMessages().send(sender, "errors.player-only");
             return;
         }
 

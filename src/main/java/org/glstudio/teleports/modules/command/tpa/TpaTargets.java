@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Set;
 
 final class TpaTargets {
-
     private TpaTargets() {
     }
 

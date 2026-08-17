@@ -1,0 +1,88 @@
+# The /homes menu.
+#
+# Left click an entry to travel, right click to delete it behind a confirmation.
+#
+# Slots are counted from 0, left to right and top to bottom. SIZE must be a
+# multiple of 9 and at most 54; anything else is rounded up and logged.
+#
+# Turn the whole thing off with menus.enabled in config.yml — /homes then falls
+# back to the chat listing, which is also always available as /listhomes.
+
+TITLE: "&8Your Homes"
+SIZE: 54
+
+DATE_FORMAT: "dd/MM/yyyy"
+
+# The top five rows hold homes; the bottom row is the controls below.
+CONTENT_SLOTS: [0,1,2,3,4,5,6,7,8, 9,10,11,12,13,14,15,16,17, 18,19,20,21,22,23,24,25,26, 27,28,29,30,31,32,33,34,35, 36,37,38,39,40,41,42,43,44]
+
+# Icon per destination world, so a page of homes is scannable at a glance.
+# Keys are world names in lower case. A world not listed uses ITEMS.HOME.MATERIAL.
+WORLD_ICONS:
+  world: GRASS_BLOCK
+  world_nether: NETHERRACK
+  world_the_end: END_STONE
+
+ITEMS:
+  HOME:
+    MATERIAL: GRASS_BLOCK
+    AMOUNT: 1
+    NAME: "&a&l%name%"
+    LORE:
+      - "&7World: &f%world%"
+      - "&7Server: &f%server%"
+      - "&7Location: &f%x%, %y%, %z%"
+      - ""
+      - "&8Created %date%"
+      - ""
+      - "&eLeft click &7to teleport"
+      - "&cRight click &7to delete"
+
+  INFO:
+    SLOT: 49
+    MATERIAL: BOOK
+    AMOUNT: 1
+    NAME: "&e&lYour Homes"
+    LORE:
+      - "&7Used: &f%used%&7/&f%limit%"
+      - ""
+      - "&7Set a new one with &f/sethome <name>"
+
+  CLOSE:
+    SLOT: 53
+    MATERIAL: BARRIER
+    AMOUNT: 1
+    NAME: "&c&lClose"
+    LORE: []
+
+  PREVIOUS_PAGE:
+    SLOT: 45
+    MATERIAL: ARROW
+    AMOUNT: 1
+    NAME: "&e« Previous Page"
+    LORE: []
+
+  NEXT_PAGE:
+    SLOT: 47
+    MATERIAL: ARROW
+    AMOUNT: 1
+    NAME: "&eNext Page »"
+    LORE: []
+
+  EMPTY:
+    MATERIAL: BARRIER
+    AMOUNT: 1
+    NAME: "&cNo homes yet"
+    LORE:
+      - "&7Stand where you want one"
+      - "&7and run &f/sethome <name>&7."
+
+# Shown when deleting a home. Coordinates cannot be recovered afterwards, which
+# is why this is a second screen rather than a one-click action.
+CONFIRM:
+  TITLE: "&8Delete '%name%'?"
+  ACCEPT: "&c&lDELETE"
+  ACCEPT_LORE:
+    - "&7This cannot be undone."
+    - "&7The coordinates will be lost."
+  CANCEL: "&a&lKEEP IT"

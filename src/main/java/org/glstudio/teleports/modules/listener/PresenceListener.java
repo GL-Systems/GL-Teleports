@@ -8,7 +8,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.glstudio.teleports.GTeleports;
 
 public class PresenceListener implements Listener {
-
     private final GTeleports plugin;
 
     public PresenceListener(GTeleports plugin) {
@@ -22,6 +21,6 @@ public class PresenceListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit(PlayerQuitEvent event) {
-        plugin.getCrossServerManager().getPlayerRegistry().unregister(event.getPlayer().getName());
+        plugin.getCrossServerManager().getPlayerRegistry().unregister(event.getPlayer());
     }
 }

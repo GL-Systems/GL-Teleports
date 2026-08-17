@@ -1,7 +1,6 @@
 package org.glstudio.teleports.modules.model;
 
 public interface TeleportDestination {
-
     String getServer();
 
     String getWorld();

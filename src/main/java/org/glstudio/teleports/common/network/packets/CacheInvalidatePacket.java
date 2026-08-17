@@ -8,7 +8,6 @@ import java.util.UUID;
 
 @Getter
 public class CacheInvalidatePacket extends Packet {
-
     private final String sourceServer;
     private final String sourceInstance;
 

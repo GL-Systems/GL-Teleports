@@ -1,16 +1,15 @@
 package org.glstudio.teleports.modules.command.home;
 
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.core.Failures;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
 
 public class DelHomeCommand extends Command {
-
     private final GTeleports plugin;
 
     public DelHomeCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
@@ -25,13 +24,13 @@ public class DelHomeCommand extends Command {
 
     @Override
     public List<String> usage() {
-        return List.of("/delhome <nombre>", "/delhome <usuario>:<home> (admin)");
+        return List.of(plugin.getMessages().raw("usage.delhome"));
     }
 
     @Override
     public void execute(CommandSender sender, String[] args) {
         if (args.length == 0) {
-            sendMessage(sender, plugin.getConfigManager().getLanguageConfig().getString("errors.specify-home"));
+            plugin.getMessages().send(sender, "errors.specify-home");
             return;
         }
 
@@ -42,7 +41,7 @@ public class DelHomeCommand extends Command {
         }
 
         if (!(sender instanceof Player player)) {
-            sendMessage(sender, plugin.getConfigManager().getLanguageConfig().getString("errors.player-only"));
+            plugin.getMessages().send(sender, "errors.player-only");
             return;
         }
 
@@ -51,7 +50,7 @@ public class DelHomeCommand extends Command {
 
     private void deleteHomeOfOther(CommandSender staff, HomeAdmin.Target target) {
         if (!staff.hasPermission(HomeAdmin.PERMISSION)) {
-            sendMessage(staff, plugin.getConfigManager().getLanguageConfig().getString("errors.no-permission"));
+            plugin.getMessages().send(staff, "errors.no-permission");
             return;
         }
 
@@ -60,15 +59,17 @@ public class DelHomeCommand extends Command {
             return;
         }
 
-        OfflinePlayer owner = HomeAdmin.resolve(target.playerName());
-        if (owner == null) {
-            sendMessage(staff, plugin.getConfigManager().getLanguageConfig().getString("errors.player-never-played")
-                    .replace("{player}", target.playerName()));
-            return;
-        }
+        Failures.guard(plugin, HomeAdmin.resolve(plugin, target.playerName()).thenAccept(owner ->
+                plugin.getServer().getScheduler().runTask(plugin, () -> {
+                    if (owner == null) {
+                        plugin.getMessages().send(staff, "errors.player-never-played",
+                                "{player}", target.playerName());
+                        return;
+                    }
 
-        String ownerName = owner.getName() != null ? owner.getName() : target.playerName();
-        plugin.getHomeManager().deleteHomeFor(staff, owner.getUniqueId(), ownerName, target.homeName());
+                    plugin.getHomeManager().deleteHomeFor(staff, owner.uuid(), owner.name(),
+                            target.homeName());
+                })), "DelHomeCommand#resolve", staff);
     }
 
     @Override

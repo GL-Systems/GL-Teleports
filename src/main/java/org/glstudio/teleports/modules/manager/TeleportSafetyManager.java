@@ -1,13 +1,17 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.core.Permissions;
 import org.glstudio.teleports.modules.model.SafetyCheckResult;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
 
 public class TeleportSafetyManager {
+    public static final String BYPASS_PERMISSION = Permissions.BYPASS_SAFETY;
 
     private final GTeleports plugin;
 
@@ -15,13 +19,46 @@ public class TeleportSafetyManager {
         this.plugin = plugin;
     }
 
+    public Location resolve(Player player, Location destination, TeleportType type) {
+        if (player != null && player.hasPermission(BYPASS_PERMISSION)) {
+            return destination;
+        }
+
+        if (checkSafety(destination, type).isSafe()) {
+            return destination;
+        }
+
+        if (!plugin.getSettings().getBoolean("safety.relocate", true)) {
+            return null;
+        }
+
+        int radius = Math.max(0, plugin.getSettings().getInt("safety.relocate-radius", 4));
+        World world = destination.getWorld();
+
+        for (int offset = 1; offset <= radius; offset++) {
+            for (int direction : new int[]{1, -1}) {
+                Location candidate = destination.clone().add(0, offset * direction, 0);
+
+                if (candidate.getY() < world.getMinHeight() || candidate.getY() > world.getMaxHeight()) {
+                    continue;
+                }
+
+                if (checkSafety(candidate, type).isSafe()) {
+                    return candidate;
+                }
+            }
+        }
+
+        return null;
+    }
+
     public SafetyCheckResult checkSafety(Location location, TeleportType type) {
-        if (!plugin.getConfigManager().getMainConfig().getBoolean("safety.enabled", true)) {
+        if (!plugin.getSettings().getBoolean("safety.enabled", true)) {
             return SafetyCheckResult.safe();
         }
 
-        SafetyCheckResult voidCheck = checkVoid(location);
-        if (!voidCheck.isSafe()) return voidCheck;
+        SafetyCheckResult heightCheck = checkHeight(location);
+        if (!heightCheck.isSafe()) return heightCheck;
 
         SafetyCheckResult lavaCheck = checkLava(location);
         if (!lavaCheck.isSafe()) return lavaCheck;
@@ -32,37 +69,46 @@ public class TeleportSafetyManager {
         SafetyCheckResult waterCheck = checkWaterTrap(location);
         if (!waterCheck.isSafe()) return waterCheck;
 
-        SafetyCheckResult heightCheck = checkHeight(location);
-        if (!heightCheck.isSafe()) return heightCheck;
-
         SafetyCheckResult floorCheck = checkFloor(location);
         if (!floorCheck.isSafe()) return floorCheck;
 
         return SafetyCheckResult.safe();
     }
 
-    private SafetyCheckResult checkVoid(Location location) {
-        int minHeight = plugin.getConfigManager().getMainConfig().getInt("safety.min-height", 0);
+    private SafetyCheckResult checkHeight(Location location) {
+        World world = location.getWorld();
+
+        int minHeight = Math.max(world.getMinHeight(),
+                plugin.getSettings().getInt("safety.min-height", world.getMinHeight()));
+        int maxHeight = Math.min(world.getMaxHeight(),
+                plugin.getSettings().getInt("safety.max-height", world.getMaxHeight()));
 
         if (location.getY() < minHeight) {
             return SafetyCheckResult.unsafe("void");
+        }
+
+        if (location.getY() > maxHeight) {
+            return SafetyCheckResult.unsafe("too-high");
         }
 
         return SafetyCheckResult.safe();
     }
 
     private SafetyCheckResult checkLava(Location location) {
-        if (!plugin.getConfigManager().getMainConfig().getBoolean("safety.check-lava", true)) {
+        if (!plugin.getSettings().getBoolean("safety.check-lava", true)) {
             return SafetyCheckResult.safe();
         }
 
-        int radius = plugin.getConfigManager().getMainConfig().getInt("safety.check-radius", 2);
+        int radius = plugin.getSettings().getInt("safety.check-radius", 1);
+        World world = location.getWorld();
+        int baseX = location.getBlockX();
+        int baseY = location.getBlockY();
+        int baseZ = location.getBlockZ();
 
         for (int x = -radius; x <= radius; x++) {
             for (int y = -1; y <= 2; y++) {
                 for (int z = -radius; z <= radius; z++) {
-                    Block block = location.clone().add(x, y, z).getBlock();
-                    if (block.getType() == Material.LAVA) {
+                    if (world.getBlockAt(baseX + x, baseY + y, baseZ + z).getType() == Material.LAVA) {
                         return SafetyCheckResult.unsafe("lava");
                     }
                 }
@@ -73,12 +119,12 @@ public class TeleportSafetyManager {
     }
 
     private SafetyCheckResult checkSuffocation(Location location) {
-        if (!plugin.getConfigManager().getMainConfig().getBoolean("safety.check-suffocation", true)) {
+        if (!plugin.getSettings().getBoolean("safety.check-suffocation", true)) {
             return SafetyCheckResult.safe();
         }
 
         Block feet = location.getBlock();
-        Block head = location.clone().add(0, 1, 0).getBlock();
+        Block head = feet.getRelative(0, 1, 0);
 
         if (feet.getType().isSolid() || head.getType().isSolid()) {
             return SafetyCheckResult.unsafe("suffocation");
@@ -88,15 +134,15 @@ public class TeleportSafetyManager {
     }
 
     private SafetyCheckResult checkWaterTrap(Location location) {
-        if (!plugin.getConfigManager().getMainConfig().getBoolean("safety.check-water-trap", true)) {
+        if (!plugin.getSettings().getBoolean("safety.check-water-trap", true)) {
             return SafetyCheckResult.safe();
         }
 
         Block feet = location.getBlock();
-        Block head = location.clone().add(0, 1, 0).getBlock();
+        Block head = feet.getRelative(0, 1, 0);
 
         if (feet.getType() == Material.WATER || head.getType() == Material.WATER) {
-            Block above = location.clone().add(0, 2, 0).getBlock();
+            Block above = feet.getRelative(0, 2, 0);
             if (above.getType() == Material.WATER || above.getType().isSolid()) {
                 return SafetyCheckResult.unsafe("water-trap");
             }
@@ -105,40 +151,29 @@ public class TeleportSafetyManager {
         return SafetyCheckResult.safe();
     }
 
-    private SafetyCheckResult checkHeight(Location location) {
-        int maxHeight = plugin.getConfigManager().getMainConfig().getInt("safety.max-height", 320);
-
-        if (location.getY() > maxHeight) {
-            return SafetyCheckResult.unsafe("too-high");
-        }
-
-        return SafetyCheckResult.safe();
-    }
-
     private SafetyCheckResult checkFloor(Location location) {
-        if (!plugin.getConfigManager().getMainConfig().getBoolean("safety.require-floor", true)) {
+        if (!plugin.getSettings().getBoolean("safety.require-floor", true)) {
             return SafetyCheckResult.safe();
         }
 
-        Block below = location.clone().add(0, -1, 0).getBlock();
+        Block below = location.getBlock().getRelative(0, -1, 0);
 
-        if (!below.getType().isSolid()) {
-            boolean foundFloor = false;
-            int maxSearchDown = plugin.getConfigManager().getMainConfig().getInt("safety.max-search-down", 5);
+        if (below.getType().isSolid()) {
+            return SafetyCheckResult.safe();
+        }
 
-            for (int y = -2; y >= -maxSearchDown; y--) {
-                Block check = location.clone().add(0, y, 0).getBlock();
-                if (check.getType().isSolid()) {
-                    foundFloor = true;
-                    break;
-                }
+        int maxSearchDown = plugin.getSettings().getInt("safety.max-search-down", 5);
+        int minHeight = location.getWorld().getMinHeight();
+
+        for (int y = -2; y >= -maxSearchDown; y--) {
+            if (location.getBlockY() + y < minHeight) {
+                break;
             }
-
-            if (!foundFloor) {
-                return SafetyCheckResult.unsafe("no-floor");
+            if (location.getBlock().getRelative(0, y, 0).getType().isSolid()) {
+                return SafetyCheckResult.safe();
             }
         }
 
-        return SafetyCheckResult.safe();
+        return SafetyCheckResult.unsafe("no-floor");
     }
 }

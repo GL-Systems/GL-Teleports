@@ -8,7 +8,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.glstudio.teleports.GTeleports;
 
 public class ArrivalListener implements Listener {
-
     private final GTeleports plugin;
 
     public ArrivalListener(GTeleports plugin) {

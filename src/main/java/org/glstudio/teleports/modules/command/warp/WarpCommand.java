@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WarpCommand extends Command {
-
     private final GTeleports plugin;
 
     public WarpCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
@@ -26,18 +25,18 @@ public class WarpCommand extends Command {
 
     @Override
     public List<String> usage() {
-        return List.of("/warp <nombre>");
+        return List.of(plugin.getMessages().raw("usage.warp"));
     }
 
     @Override
     public void execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sendMessage(sender, plugin.getConfigManager().getLanguageConfig().getString("errors.player-only"));
+            plugin.getMessages().send(sender, "errors.player-only");
             return;
         }
 
         if (args.length == 0) {
-            sendMessage(player, plugin.getConfigManager().getLanguageConfig().getString("errors.specify-warp-name"));
+            plugin.getMessages().send(player, "errors.specify-warp-name");
             return;
         }
 

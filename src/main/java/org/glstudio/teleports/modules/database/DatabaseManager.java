@@ -5,7 +5,11 @@ import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.database.impl.*;
 import org.glstudio.nexus.utils.LoggerUtils;
 
+import java.util.concurrent.TimeUnit;
+
 public class DatabaseManager {
+    private static final long STARTUP_TIMEOUT_SECONDS = 30L;
+    private static final long SHUTDOWN_TIMEOUT_SECONDS = 10L;
 
     private final GTeleports plugin;
     @Getter
@@ -30,14 +34,20 @@ public class DatabaseManager {
             case MONGO -> provider = new MongoProvider(plugin);
         }
 
-        provider.initialize().join();
+        provider.initialize().orTimeout(STARTUP_TIMEOUT_SECONDS, TimeUnit.SECONDS).join();
         LoggerUtils.logSuccess("Database initialized successfully!");
     }
 
     public void shutdown() {
         if (provider != null) {
             LoggerUtils.logInfo("Shutting down database...");
-            provider.shutdown().join();
+            try {
+                provider.shutdown().get(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                LoggerUtils.logWarn("The database did not close cleanly: " + e.getMessage());
+            }
             LoggerUtils.logSuccess("Database shut down successfully!");
         }
     }

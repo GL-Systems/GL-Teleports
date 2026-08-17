@@ -8,7 +8,6 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 public class NetworkPlayer {
-
     private UUID uuid;
     private String name;
     private String server;

@@ -3,8 +3,9 @@ package org.glstudio.teleports.modules.database.impl;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.modules.database.DatabaseProvider;
 import org.glstudio.teleports.modules.model.Home;
+import org.glstudio.teleports.modules.model.PlayerRef;
+import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.SpawnLocation;
 import org.glstudio.teleports.modules.model.Warp;
 
@@ -17,39 +18,117 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public class MySQLProvider implements DatabaseProvider {
-
-    private final GTeleports plugin;
+public class MySQLProvider extends SqlProvider {
     private HikariDataSource dataSource;
 
     public MySQLProvider(GTeleports plugin) {
-        this.plugin = plugin;
+        super(plugin);
+    }
+
+    @Override
+    protected Connection connection() throws SQLException {
+        return dataSource.getConnection();
+    }
+
+    @Override
+    protected String replaceInto(String table, String... columns) {
+        StringBuilder updates = new StringBuilder();
+        for (String column : columns) {
+            if (updates.length() > 0) {
+                updates.append(", ");
+            }
+            updates.append(column).append("=VALUES(").append(column).append(')');
+        }
+
+        return "INSERT INTO " + table + columnsAndPlaceholders(columns)
+                + " ON DUPLICATE KEY UPDATE " + updates;
+    }
+
+    @Override
+    protected String autoIncrementId() {
+        return "BIGINT AUTO_INCREMENT PRIMARY KEY";
+    }
+
+    @Override
+    protected String tableOptions() {
+        return " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
     }
 
     @Override
     public CompletableFuture<Void> initialize() {
-        return CompletableFuture.runAsync(() -> {
+        return run(() -> {
             try {
                 var dbConfig = plugin.getConfigManager().getDatabaseConfig();
+
+                boolean useSsl = dbConfig.getBoolean("mysql.useSSL");
 
                 HikariConfig config = new HikariConfig();
                 config.setJdbcUrl("jdbc:mysql://" +
                         dbConfig.getString("mysql.host") + ":" +
                         dbConfig.getInt("mysql.port") + "/" +
                         dbConfig.getString("mysql.database") +
-                        "?useSSL=" + dbConfig.getBoolean("mysql.useSSL"));
+                        "?useSSL=" + useSsl +
+
+                        "&allowPublicKeyRetrieval=" + !useSsl +
+
+                        "&characterEncoding=UTF-8" +
+                        "&useUnicode=true");
                 config.setUsername(dbConfig.getString("mysql.username"));
                 config.setPassword(dbConfig.getString("mysql.password"));
                 config.setMaximumPoolSize(dbConfig.getInt("mysql.pool-size", 10));
                 config.setConnectionTimeout(30000);
 
+                config.setMaxLifetime(1_800_000L);
+
                 dataSource = new HikariDataSource(config);
 
                 createTables();
             } catch (Exception e) {
-                throw new RuntimeException("Failed to initialize MySQL provider", e);
+                throw new RuntimeException("Failed to initialize MySQL provider. " + hintFor(e), e);
             }
         });
+    }
+
+    private String hintFor(Throwable error) {
+        String message = String.valueOf(rootMessage(error)).toLowerCase(java.util.Locale.ROOT);
+
+        if (message.contains("access denied")) {
+            return "Check mysql.username and mysql.password in database.yml, and that the user is "
+                    + "allowed to connect from this host.";
+        }
+        if (message.contains("unknown database")) {
+            return "The database named in mysql.database does not exist. Create it first; the plugin "
+                    + "creates its tables but not the database itself.";
+        }
+        if (message.contains("communications link failure") || message.contains("connection refused")
+                || message.contains("could not create connection")) {
+            return "Could not reach the server at mysql.host:mysql.port. Check it is running and "
+                    + "reachable from here.";
+        }
+        if (message.contains("no suitable driver") || message.contains("classnotfound")) {
+            return "The MySQL driver was not loaded. It is downloaded at startup via the libraries "
+                    + "block in plugin.yml, which needs the server to have internet access on first run.";
+        }
+        if (message.contains("public key retrieval")) {
+            return "MySQL 8 refused the connection over plain TCP. Set mysql.useSSL to true, or allow "
+                    + "public key retrieval on the server.";
+        }
+        if (message.contains("syntax") || message.contains("errorcode=1064")) {
+            return "The server rejected one of the plugin's own statements, which points at an "
+                    + "unusually old MySQL. Report this with the statement named below.";
+        }
+
+        return "See the cause below.";
+    }
+
+    private static String rootMessage(Throwable error) {
+        Throwable current = error;
+
+        for (int depth = 0; depth < 10 && current.getCause() != null && current.getCause() != current; depth++) {
+            current = current.getCause();
+        }
+
+        return current.getMessage();
     }
 
     private void createTables() throws SQLException {
@@ -86,23 +165,74 @@ public class MySQLProvider implements DatabaseProvider {
             );
 
             conn.createStatement().execute(
-                    "CREATE TABLE IF NOT EXISTS spawn (" +
-                            "id INT PRIMARY KEY, " +
+                    "CREATE TABLE IF NOT EXISTS spawns (" +
+                            "server VARCHAR(64) PRIMARY KEY, " +
+                            "world VARCHAR(64) NOT NULL, " +
+                            "x DOUBLE NOT NULL, " +
+                            "y DOUBLE NOT NULL, " +
+                            "z DOUBLE NOT NULL, " +
+                            "yaw FLOAT NOT NULL, " +
+                            "pitch FLOAT NOT NULL" +
+                            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+            );
+
+            conn.createStatement().execute(
+                    "CREATE TABLE IF NOT EXISTS player_settings (" +
+                            "uuid VARCHAR(36) PRIMARY KEY, " +
+                            "tpa_blocked BOOLEAN NOT NULL DEFAULT FALSE" +
+                            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+            );
+
+            conn.createStatement().execute(
+                    "CREATE TABLE IF NOT EXISTS players (" +
+                            "uuid VARCHAR(36) PRIMARY KEY, " +
+                            "name VARCHAR(16) NOT NULL, " +
+                            "last_seen BIGINT NOT NULL" +
+                            ")  ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+            );
+
+            conn.createStatement().execute(
+                    "CREATE TABLE IF NOT EXISTS last_locations (" +
+                            "uuid VARCHAR(36) NOT NULL, " +
+                            "server VARCHAR(64) NOT NULL, " +
                             "world VARCHAR(64) NOT NULL, " +
                             "x DOUBLE NOT NULL, " +
                             "y DOUBLE NOT NULL, " +
                             "z DOUBLE NOT NULL, " +
                             "yaw FLOAT NOT NULL, " +
                             "pitch FLOAT NOT NULL, " +
-                            "server VARCHAR(64)" +
+                            "updated_at BIGINT NOT NULL, " +
+                            "PRIMARY KEY (uuid, server)" +
                             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
             );
+
+            createFeatureTables(conn);
+
+            String server = currentServer();
+            SqlSchema.addColumnIfMissing(conn, "homes", "server", "VARCHAR(64)");
+            SqlSchema.addColumnIfMissing(conn, "warps", "server", "VARCHAR(64)");
+            addWarpOverrideColumns(conn);
+            SqlSchema.backfillServer(conn, "homes", server);
+            SqlSchema.backfillServer(conn, "warps", server);
+            SqlSchema.migrateLegacySpawn(conn, server);
+            SqlSchema.createIndexes(conn);
+
+            SqlSchema.ensureVersionTable(conn);
+            SqlSchema.writeVersion(conn,
+                    "INSERT INTO schema_version (id, version, updated_at) VALUES (1, ?, ?) ON DUPLICATE KEY UPDATE version=VALUES(version), updated_at=VALUES(updated_at)",
+                    SqlSchema.CURRENT_VERSION);
         }
+    }
+
+    private String currentServer() {
+        return plugin.getMultiServerSettings() == null
+                ? "unnamed-server"
+                : plugin.getMultiServerSettings().getServerName();
     }
 
     @Override
     public CompletableFuture<Void> shutdown() {
-        return CompletableFuture.runAsync(() -> {
+        return run(() -> {
             if (dataSource != null && !dataSource.isClosed()) {
                 dataSource.close();
             }
@@ -111,13 +241,12 @@ public class MySQLProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<List<Home>> getHomes(UUID owner) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supply(() -> {
             List<Home> homes = new ArrayList<>();
             String query = "SELECT * FROM homes WHERE owner = ?";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, owner.toString());
                 ResultSet rs = stmt.executeQuery();
 
@@ -145,12 +274,11 @@ public class MySQLProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Home> getHome(UUID owner, String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supply(() -> {
             String query = "SELECT * FROM homes WHERE owner = ? AND name = ?";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, owner.toString());
                 stmt.setString(2, name);
                 ResultSet rs = stmt.executeQuery();
@@ -179,7 +307,7 @@ public class MySQLProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Void> saveHome(Home home) {
-        return CompletableFuture.runAsync(() -> {
+        return run(() -> {
             String query = "INSERT INTO homes (owner, name, world, x, y, z, yaw, pitch, created_at, server) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
                     "ON DUPLICATE KEY UPDATE world=VALUES(world), x=VALUES(x), y=VALUES(y), z=VALUES(z), " +
@@ -187,7 +315,6 @@ public class MySQLProvider implements DatabaseProvider {
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, home.getOwner().toString());
                 stmt.setString(2, home.getName());
                 stmt.setString(3, home.getWorld());
@@ -208,12 +335,11 @@ public class MySQLProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Void> deleteHome(UUID owner, String name) {
-        return CompletableFuture.runAsync(() -> {
+        return run(() -> {
             String query = "DELETE FROM homes WHERE owner = ? AND name = ?";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, owner.toString());
                 stmt.setString(2, name);
                 stmt.executeUpdate();
@@ -224,51 +350,17 @@ public class MySQLProvider implements DatabaseProvider {
     }
 
     @Override
-    public CompletableFuture<Integer> getHomeCount(UUID owner) {
-        return CompletableFuture.supplyAsync(() -> {
-            String query = "SELECT COUNT(*) FROM homes WHERE owner = ?";
-
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-
-                stmt.setString(1, owner.toString());
-                ResultSet rs = stmt.executeQuery();
-
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed to get home count", e);
-            }
-
-            return 0;
-        });
-    }
-
-    @Override
     public CompletableFuture<List<Warp>> getAllWarps() {
-        return CompletableFuture.supplyAsync(() -> {
+        return supply(() -> {
             List<Warp> warps = new ArrayList<>();
             String query = "SELECT * FROM warps";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 ResultSet rs = stmt.executeQuery();
 
                 while (rs.next()) {
-                    warps.add(new Warp(
-                            rs.getString("name"),
-                            rs.getString("world"),
-                            rs.getDouble("x"),
-                            rs.getDouble("y"),
-                            rs.getDouble("z"),
-                            rs.getFloat("yaw"),
-                            rs.getFloat("pitch"),
-                            rs.getString("permission"),
-                            rs.getLong("created_at"),
-                            rs.getString("server")
-                    ));
+                    warps.add(readWarp(rs));
                 }
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to get warps", e);
@@ -280,28 +372,16 @@ public class MySQLProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Warp> getWarp(String name) {
-        return CompletableFuture.supplyAsync(() -> {
+        return supply(() -> {
             String query = "SELECT * FROM warps WHERE name = ?";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, name);
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
-                    return new Warp(
-                            rs.getString("name"),
-                            rs.getString("world"),
-                            rs.getDouble("x"),
-                            rs.getDouble("y"),
-                            rs.getDouble("z"),
-                            rs.getFloat("yaw"),
-                            rs.getFloat("pitch"),
-                            rs.getString("permission"),
-                            rs.getLong("created_at"),
-                            rs.getString("server")
-                    );
+                    return readWarp(rs);
                 }
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to get warp", e);
@@ -313,15 +393,12 @@ public class MySQLProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Void> saveWarp(Warp warp) {
-        return CompletableFuture.runAsync(() -> {
-            String query = "INSERT INTO warps (name, world, x, y, z, yaw, pitch, permission, created_at, server) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-                    "ON DUPLICATE KEY UPDATE world=VALUES(world), x=VALUES(x), y=VALUES(y), z=VALUES(z), " +
-                    "yaw=VALUES(yaw), pitch=VALUES(pitch), permission=VALUES(permission), server=VALUES(server)";
+        return run(() -> {
+            String query = replaceInto("warps", "name", "world", "x", "y", "z", "yaw", "pitch",
+                    "permission", "created_at", "server", "cost", "cooldown", "delay");
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, warp.getName());
                 stmt.setString(2, warp.getWorld());
                 stmt.setDouble(3, warp.getX());
@@ -332,6 +409,7 @@ public class MySQLProvider implements DatabaseProvider {
                 stmt.setString(8, warp.getPermission());
                 stmt.setLong(9, warp.getCreatedAt());
                 stmt.setString(10, warp.getServer());
+                bindWarpOverrides(stmt, warp, 11);
 
                 stmt.executeUpdate();
             } catch (SQLException e) {
@@ -341,15 +419,14 @@ public class MySQLProvider implements DatabaseProvider {
     }
 
     @Override
-    public CompletableFuture<Void> deleteWarp(String name) {
-        return CompletableFuture.runAsync(() -> {
+    public CompletableFuture<Boolean> deleteWarp(String name) {
+        return supply(() -> {
             String query = "DELETE FROM warps WHERE name = ?";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 stmt.setString(1, name);
-                stmt.executeUpdate();
+                return stmt.executeUpdate() > 0;
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to delete warp", e);
             }
@@ -357,35 +434,12 @@ public class MySQLProvider implements DatabaseProvider {
     }
 
     @Override
-    public CompletableFuture<Boolean> warpExists(String name) {
-        return CompletableFuture.supplyAsync(() -> {
-            String query = "SELECT COUNT(*) FROM warps WHERE name = ?";
-
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
-
-                stmt.setString(1, name);
-                ResultSet rs = stmt.executeQuery();
-
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed to check warp existence", e);
-            }
-
-            return false;
-        });
-    }
-
-    @Override
     public CompletableFuture<SpawnLocation> getSpawn() {
-        return CompletableFuture.supplyAsync(() -> {
-            String query = "SELECT * FROM spawn WHERE id = 1";
+        return supply(() -> {
+            String query = "SELECT * FROM spawns LIMIT 1";
 
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(query)) {
-
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
@@ -409,26 +463,150 @@ public class MySQLProvider implements DatabaseProvider {
 
     @Override
     public CompletableFuture<Void> saveSpawn(SpawnLocation spawn) {
-        return CompletableFuture.runAsync(() -> {
-            String query = "INSERT INTO spawn (id, world, x, y, z, yaw, pitch, server) VALUES (1, ?, ?, ?, ?, ?, ?, ?) " +
+        return run(() -> {
+            String query = "INSERT INTO spawns (server, world, x, y, z, yaw, pitch) VALUES (?, ?, ?, ?, ?, ?, ?) " +
                     "ON DUPLICATE KEY UPDATE world=VALUES(world), x=VALUES(x), y=VALUES(y), z=VALUES(z), " +
-                    "yaw=VALUES(yaw), pitch=VALUES(pitch), server=VALUES(server)";
+                    "yaw=VALUES(yaw), pitch=VALUES(pitch)";
 
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(query)) {
+            try (Connection conn = dataSource.getConnection()) {
 
-                stmt.setString(1, spawn.getWorld());
-                stmt.setDouble(2, spawn.getX());
-                stmt.setDouble(3, spawn.getY());
-                stmt.setDouble(4, spawn.getZ());
-                stmt.setFloat(5, spawn.getYaw());
-                stmt.setFloat(6, spawn.getPitch());
-                stmt.setString(7, spawn.getServer());
+                SqlSchema.clearOtherSpawns(conn, spawn.getServer());
 
-                stmt.executeUpdate();
+                try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                    stmt.setString(1, spawn.getServer());
+                    stmt.setString(2, spawn.getWorld());
+                    stmt.setDouble(3, spawn.getX());
+                    stmt.setDouble(4, spawn.getY());
+                    stmt.setDouble(5, spawn.getZ());
+                    stmt.setFloat(6, spawn.getYaw());
+                    stmt.setFloat(7, spawn.getPitch());
+
+                    stmt.executeUpdate();
+                }
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to save spawn", e);
             }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Boolean> isTpaBlocked(UUID uuid) {
+        return supply(() -> {
+            String query = "SELECT tpa_blocked FROM player_settings WHERE uuid = ?";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    return rs.getBoolean("tpa_blocked");
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to read player settings", e);
+            }
+
+            return false;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> setTpaBlocked(UUID uuid, boolean blocked) {
+        return run(() -> {
+            String query = "INSERT INTO player_settings (uuid, tpa_blocked) VALUES (?, ?) ON DUPLICATE KEY UPDATE tpa_blocked=VALUES(tpa_blocked)";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setBoolean(2, blocked);
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to save player settings", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> rememberPlayer(UUID uuid, String name) {
+        return run(() -> {
+            String query = "INSERT INTO players (uuid, name, last_seen) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), last_seen=VALUES(last_seen)";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setString(2, name);
+                stmt.setLong(3, System.currentTimeMillis());
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to remember player", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<PlayerRef> findPlayer(String name) {
+        return supply(() -> {
+            String query = "SELECT uuid, name FROM players WHERE LOWER(name) = LOWER(?)";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, name);
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    return new PlayerRef(UUID.fromString(rs.getString("uuid")), rs.getString("name"));
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to look up player", e);
+            }
+
+            return null;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> saveLastLocation(UUID uuid, String server, StoredLocation location) {
+        return run(() -> {
+            String query = "INSERT INTO last_locations (uuid, server, world, x, y, z, yaw, pitch, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE world=VALUES(world), x=VALUES(x), y=VALUES(y), z=VALUES(z), yaw=VALUES(yaw), pitch=VALUES(pitch), updated_at=VALUES(updated_at)";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setString(2, server);
+                stmt.setString(3, location.world());
+                stmt.setDouble(4, location.x());
+                stmt.setDouble(5, location.y());
+                stmt.setDouble(6, location.z());
+                stmt.setFloat(7, location.yaw());
+                stmt.setFloat(8, location.pitch());
+                stmt.setLong(9, System.currentTimeMillis());
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to save last location", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<StoredLocation> getLastLocation(UUID uuid, String server) {
+        return supply(() -> {
+            String query = "SELECT * FROM last_locations WHERE uuid = ? AND server = ?";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setString(2, server);
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    return new StoredLocation(rs.getString("world"), rs.getDouble("x"),
+                            rs.getDouble("y"), rs.getDouble("z"), rs.getFloat("yaw"), rs.getFloat("pitch"));
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to read last location", e);
+            }
+
+            return null;
         });
     }
 }

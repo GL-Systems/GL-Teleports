@@ -1,9 +1,14 @@
 # Database Configuration for GoldenTeleports
 # Available types: yaml, sqlite, h2, mysql, mongo
 
+# Bumped whenever a release changes the shape of this file. The plugin compares it against the
+# version it expects and says so on startup when they differ, so a stale file is noticed then
+# rather than through whichever setting quietly stopped applying.
+config-version: 1
+
 # Current database type
 #
-# For cross-server homes/warps/spawn (MULTI_SERVER in config.yml) every server must read and
+# For cross-server homes/warps/spawn (multi-server in config.yml) every server must read and
 # write the same records, so only "mysql" and "mongo" work. The yaml, sqlite and h2 backends
 # store their data inside each server's own plugin folder, and each server would see a
 # different set of homes and warps.

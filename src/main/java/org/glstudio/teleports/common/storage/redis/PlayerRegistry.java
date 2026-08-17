@@ -20,11 +20,10 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class PlayerRegistry {
-
     private static final long ENTRY_TTL_SECONDS = 90L;
     private static final long HEARTBEAT_TICKS = 20L * 30;
 
-    private static final long DIRECTORY_REFRESH_SECONDS = 5L;
+    private static final long DIRECTORY_REFRESH_SECONDS = 20L;
 
     private final GTeleports plugin;
     private final RedisService redisService;
@@ -35,6 +34,8 @@ public class PlayerRegistry {
     private ScheduledFuture<?> directoryTask;
 
     private volatile List<String> networkPlayers = List.of();
+
+    private volatile Set<String> knownServers = Set.of();
 
     public PlayerRegistry(GTeleports plugin, RedisService redisService, TeleportExecutors executors,
                           MultiServerSettings settings) {
@@ -48,6 +49,9 @@ public class PlayerRegistry {
         heartbeatTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             List<NetworkPlayer> online = new ArrayList<>();
             for (Player player : Bukkit.getOnlinePlayers()) {
+                if (isVanished(player)) {
+                    continue;
+                }
                 online.add(new NetworkPlayer(player.getUniqueId(), player.getName(), settings.getServerName()));
             }
 
@@ -65,7 +69,7 @@ public class PlayerRegistry {
                 LoggerUtils.logWarn("Player registry heartbeat failed: " + error.getMessage());
                 return null;
             });
-        }, HEARTBEAT_TICKS, HEARTBEAT_TICKS);
+        }, 20L, HEARTBEAT_TICKS);
 
         directoryTask = executors.scheduler().scheduleWithFixedDelay(
                 this::refreshDirectory, DIRECTORY_REFRESH_SECONDS, DIRECTORY_REFRESH_SECONDS,
@@ -82,8 +86,16 @@ public class PlayerRegistry {
             directoryTask = null;
         }
         networkPlayers = List.of();
+        knownServers = Set.of();
 
         try {
+            List<String> keys = new ArrayList<>();
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                keys.add(uuidKey(player.getUniqueId()));
+                keys.add(nameKey(player.getName()));
+            }
+            redisService.deleteAll(keys);
+
             redisService.delete(rosterKey(settings.getServerName()));
             redisService.removeFromSet(serversKey(), settings.getServerName());
         } catch (Exception e) {
@@ -93,6 +105,10 @@ public class PlayerRegistry {
     }
 
     public void register(Player player) {
+        if (isVanished(player)) {
+            return;
+        }
+
         NetworkPlayer entry = new NetworkPlayer(player.getUniqueId(), player.getName(), settings.getServerName());
 
         CompletableFuture.runAsync(() -> write(entry), executors.io()).exceptionally(error -> {
@@ -102,10 +118,19 @@ public class PlayerRegistry {
         });
 
         publishRoster(null);
+        refreshSoon();
     }
 
-    public void unregister(String playerName) {
-        CompletableFuture.runAsync(() -> redisService.delete(key(playerName)), executors.io())
+    public void unregister(Player player) {
+        UUID uuid = player.getUniqueId();
+        String playerName = player.getName();
+
+        CompletableFuture.runAsync(
+                        () -> {
+                            redisService.deleteIfOwnedBy(uuidKey(uuid), settings.getServerName());
+                            redisService.deleteIfValueIs(nameKey(playerName), uuid.toString());
+                        },
+                        executors.io())
                 .exceptionally(error -> {
                     LoggerUtils.logDebug("PlayerRegistry", "Could not remove " + playerName + ": "
                             + error.getMessage());
@@ -113,11 +138,21 @@ public class PlayerRegistry {
                 });
 
         publishRoster(playerName);
+        refreshSoon();
+    }
+
+    private void refreshSoon() {
+        executors.scheduler().schedule(this::refreshDirectory, 1, TimeUnit.SECONDS);
     }
 
     public CompletableFuture<NetworkPlayer> lookup(String playerName) {
         return CompletableFuture.supplyAsync(() -> {
-            String raw = redisService.get(key(playerName));
+            String uuid = redisService.get(nameKey(playerName));
+            if (uuid == null) {
+                return null;
+            }
+
+            String raw = redisService.get(uuidKey(uuid));
             return raw == null ? null : parse(raw);
         }, executors.io()).exceptionally(error -> {
             LoggerUtils.logWarn("Player registry lookup for '" + playerName + "' failed: "
@@ -128,6 +163,40 @@ public class PlayerRegistry {
 
     public List<String> networkPlayerNames() {
         return networkPlayers;
+    }
+
+    public Set<String> knownServers() {
+        return knownServers;
+    }
+
+    public boolean isKnownServer(String server) {
+        Set<String> servers = knownServers;
+        return servers.isEmpty() || settings.isLocalServer(server) || servers.contains(lower(server));
+    }
+
+    public void markServer(String server, boolean online) {
+        if (server == null || server.isBlank() || settings.isLocalServer(server)) {
+            return;
+        }
+
+        Set<String> updated = new LinkedHashSet<>(knownServers);
+        updated.add(lower(settings.getServerName()));
+
+        boolean changed = online ? updated.add(lower(server)) : updated.remove(lower(server));
+
+        if (!changed) {
+            return;
+        }
+
+        knownServers = Set.copyOf(updated);
+
+        LoggerUtils.logDebug("PlayerRegistry", "Server '" + server + "' announced itself as "
+                + (online ? "online" : "offline") + ".");
+
+        if (online) {
+
+            refreshSoon();
+        }
     }
 
     private void publishRoster(String leaving) {
@@ -165,6 +234,11 @@ public class PlayerRegistry {
                 }
             }
 
+            Set<String> seen = new LinkedHashSet<>();
+            seen.add(lower(settings.getServerName()));
+            servers.forEach(server -> seen.add(lower(server)));
+            knownServers = Set.copyOf(seen);
+
             if (others.isEmpty()) {
                 networkPlayers = List.of();
                 return;
@@ -196,7 +270,9 @@ public class PlayerRegistry {
 
             for (String server : lapsed) {
                 redisService.removeFromSet(serversKey(), server);
+                seen.remove(lower(server));
             }
+            knownServers = Set.copyOf(seen);
         } catch (Exception e) {
             LoggerUtils.logWarn("Could not refresh the network player directory; tab completion "
                     + "will keep the previous names: " + e.getMessage());
@@ -213,9 +289,11 @@ public class PlayerRegistry {
     }
 
     private void write(NetworkPlayer player) {
-        redisService.set(key(player.getName()),
+        redisService.set(uuidKey(player.getUuid()),
                 player.getUuid() + ";" + player.getName() + ";" + player.getServer(),
                 ENTRY_TTL_SECONDS);
+
+        redisService.set(nameKey(player.getName()), player.getUuid().toString(), ENTRY_TTL_SECONDS);
     }
 
     private NetworkPlayer parse(String raw) {
@@ -230,8 +308,16 @@ public class PlayerRegistry {
         }
     }
 
-    private String key(String playerName) {
-        return settings.getChannel() + ":player:" + playerName.toLowerCase(Locale.ROOT);
+    private String uuidKey(Object uuid) {
+        return settings.getChannel() + ":player:" + uuid;
+    }
+
+    private String nameKey(String playerName) {
+        return settings.getChannel() + ":name:" + lower(playerName);
+    }
+
+    private static String lower(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
     private String rosterKey(String server) {

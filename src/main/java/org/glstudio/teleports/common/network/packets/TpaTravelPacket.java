@@ -11,6 +11,7 @@ import java.util.UUID;
 
 @Getter
 public class TpaTravelPacket extends Packet {
+    private final UUID id;
 
     private final String sourceInstance;
     private final String handlerServer;
@@ -29,9 +30,10 @@ public class TpaTravelPacket extends Packet {
     private final TeleportType teleportType;
     private final long timestamp;
 
-    public TpaTravelPacket(String sourceInstance, String handlerServer, UUID travellerUuid,
+    public TpaTravelPacket(UUID id, String sourceInstance, String handlerServer, UUID travellerUuid,
                            String travellerName, String destinationServer, Location destination,
                            TeleportType teleportType) {
+        this.id = id;
         this.sourceInstance = sourceInstance;
         this.handlerServer = handlerServer;
         this.travellerUuid = travellerUuid;
@@ -49,6 +51,11 @@ public class TpaTravelPacket extends Packet {
 
     public RemoteDestination toDestination() {
         return new RemoteDestination(destinationServer, world, x, y, z, yaw, pitch);
+    }
+
+    @Override
+    public String destinationServer() {
+        return handlerServer;
     }
 
     @Override

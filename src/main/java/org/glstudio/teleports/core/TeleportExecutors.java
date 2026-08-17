@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TeleportExecutors {
-
     private final ExecutorService ioExecutor;
     private final ScheduledExecutorService scheduler;
 
