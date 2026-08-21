@@ -12,7 +12,7 @@ import org.glstudio.teleports.common.menu.button.ButtonBuilder;
 import org.glstudio.teleports.common.menu.button.ButtonPresets;
 import org.glstudio.teleports.common.menu.extra.ConfirmMenu;
 import org.glstudio.teleports.common.menu.paginated.PaginatedMenu;
-import org.glstudio.teleports.core.Failures;
+import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.manager.HomeManager;
 import org.glstudio.teleports.modules.model.Home;
 

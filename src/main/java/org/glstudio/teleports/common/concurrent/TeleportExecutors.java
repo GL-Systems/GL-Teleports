@@ -1,4 +1,4 @@
-package org.glstudio.teleports.core;
+package org.glstudio.teleports.common.concurrent;
 
 import org.glstudio.nexus.utils.LoggerUtils;
 

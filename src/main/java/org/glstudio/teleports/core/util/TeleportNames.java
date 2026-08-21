@@ -1,4 +1,4 @@
-package org.glstudio.teleports.core;
+package org.glstudio.teleports.core.util;
 
 import java.util.Locale;
 import java.util.regex.Pattern;

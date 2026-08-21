@@ -2,7 +2,7 @@ package org.glstudio.teleports.modules.manager;
 
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.Failures;
+import org.glstudio.teleports.core.util.Failures;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;

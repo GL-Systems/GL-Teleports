@@ -6,7 +6,16 @@ import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.common.concurrent.TeleportExecutors;
+import org.glstudio.teleports.common.config.ConfigValidator;
+import org.glstudio.teleports.common.config.Messages;
+import org.glstudio.teleports.common.config.MultiServerSettings;
+import org.glstudio.teleports.common.config.Settings;
+import org.glstudio.teleports.core.util.Diagnostics;
+import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.database.DatabaseType;
+import org.glstudio.teleports.modules.manager.Confirmations;
+import org.glstudio.teleports.modules.service.BackupService;
 import org.glstudio.teleports.modules.command.home.DelHomeCommand;
 import org.glstudio.teleports.modules.command.GLTeleportsCommand;
 import org.glstudio.teleports.modules.command.home.HomeAdmin;
@@ -108,7 +117,7 @@ public class StartupService {
             plugin.setMessages(new Messages(plugin));
             plugin.setSettings(new Settings(plugin));
             plugin.setConfirmations(new Confirmations());
-            applyNexusMessages(plugin);
+            plugin.getMessages().applyToNexus();
 
             plugin.setMultiServerSettings(new MultiServerSettings(plugin.getConfigManager().getMainConfig()));
 
@@ -152,11 +161,6 @@ public class StartupService {
                         + "settings will not appear in your file. Compare it against the copy in the jar.");
             }
         }
-    }
-
-    public static void applyNexusMessages(GTeleports plugin) {
-        Command.setNoPermissionMessage(plugin.getMessages().raw("errors.no-permission"));
-        Command.setPlayersOnlyMessage(plugin.getMessages().raw("errors.player-only"));
     }
 
     private boolean loadExecutors() {

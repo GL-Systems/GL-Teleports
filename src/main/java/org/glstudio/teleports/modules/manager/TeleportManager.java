@@ -4,7 +4,7 @@ import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.api.Events;
 import org.glstudio.teleports.api.event.PostTeleportEvent;
 import org.glstudio.teleports.api.event.PreTeleportEvent;
-import org.glstudio.teleports.core.TeleportRules;
+import org.glstudio.teleports.modules.model.TeleportRules;
 import org.glstudio.teleports.modules.model.SafetyCheckResult;
 import org.glstudio.teleports.modules.model.TeleportDestination;
 import org.glstudio.teleports.modules.model.TeleportResult;

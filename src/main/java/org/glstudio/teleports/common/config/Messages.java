@@ -1,7 +1,8 @@
-package org.glstudio.teleports.core;
+package org.glstudio.teleports.common.config;
 
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
+import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.utils.CC;
 import org.glstudio.nexus.utils.ConfigFile;
 import org.glstudio.teleports.GTeleports;
@@ -57,6 +58,11 @@ public final class Messages {
 
     public void reset() {
         resolvedFallbacks.clear();
+    }
+
+    public void applyToNexus() {
+        Command.setNoPermissionMessage(raw("errors.no-permission"));
+        Command.setPlayersOnlyMessage(raw("errors.player-only"));
     }
 
     private static String apply(String message, String... placeholders) {

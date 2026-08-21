@@ -8,8 +8,8 @@ import org.glstudio.teleports.common.network.packets.TpaRequestPacket;
 import org.glstudio.teleports.common.network.packets.TpaResponsePacket;
 import org.glstudio.teleports.common.network.packets.TpaTravelPacket;
 import org.glstudio.teleports.common.storage.redis.RedisService;
-import org.glstudio.teleports.core.MultiServerSettings;
-import org.glstudio.teleports.core.TeleportExecutors;
+import org.glstudio.teleports.common.config.MultiServerSettings;
+import org.glstudio.teleports.common.concurrent.TeleportExecutors;
 import org.glstudio.teleports.modules.manager.CrossServerManager;
 import org.glstudio.teleports.modules.manager.TpaManager;
 

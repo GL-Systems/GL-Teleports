@@ -1,4 +1,4 @@
-package org.glstudio.teleports.core;
+package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.entity.Player;
 

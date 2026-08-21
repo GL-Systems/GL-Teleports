@@ -6,8 +6,8 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.MultiServerSettings;
-import org.glstudio.teleports.core.TeleportExecutors;
+import org.glstudio.teleports.common.config.MultiServerSettings;
+import org.glstudio.teleports.common.concurrent.TeleportExecutors;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

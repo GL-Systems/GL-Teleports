@@ -1,7 +1,7 @@
 package org.glstudio.teleports.modules.command.home;
 
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.Failures;
+import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
 import org.bukkit.command.CommandSender;

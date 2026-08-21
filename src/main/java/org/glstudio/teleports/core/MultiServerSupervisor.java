@@ -3,6 +3,7 @@ package org.glstudio.teleports.core;
 import org.bukkit.Bukkit;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.common.config.MultiServerSettings;
 import org.glstudio.teleports.common.network.PacketHandler;
 import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
 import org.glstudio.teleports.common.storage.redis.RedisService;

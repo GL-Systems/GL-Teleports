@@ -7,7 +7,7 @@ import org.glstudio.teleports.api.event.HomeCreateEvent;
 import org.glstudio.teleports.api.event.HomeDeleteEvent;
 import org.glstudio.teleports.api.event.WarpCreateEvent;
 import org.glstudio.teleports.api.event.WarpDeleteEvent;
-import org.glstudio.teleports.core.TeleportNames;
+import org.glstudio.teleports.core.util.TeleportNames;
 import org.glstudio.teleports.modules.manager.HomeManager;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.teleports.modules.model.HomeShare;

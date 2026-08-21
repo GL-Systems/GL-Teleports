@@ -1,4 +1,4 @@
-package org.glstudio.teleports.core;
+package org.glstudio.teleports.modules.service;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.teleports.modules.model.SpawnLocation;
 import org.glstudio.teleports.modules.model.Warp;

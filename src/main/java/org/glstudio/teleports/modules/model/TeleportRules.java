@@ -1,11 +1,8 @@
-package org.glstudio.teleports.core;
+package org.glstudio.teleports.modules.model;
 
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.modules.model.TeleportDestination;
-import org.glstudio.teleports.modules.model.TeleportType;
-import org.glstudio.teleports.modules.model.Warp;
 
 public record TeleportRules(double cost, int cooldownSeconds, int delaySeconds) {
     public static final String COOLDOWN_PERMISSION = "golden.teleports.cooldown.";

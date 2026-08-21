@@ -1,4 +1,4 @@
-package org.glstudio.teleports.core;
+package org.glstudio.teleports.core.util;
 
 import org.glstudio.nexus.utils.LoggerUtils;
 
@@ -27,7 +27,18 @@ public final class Diagnostics {
         return current;
     }
 
-    public static Throwable unwrap(Throwable error) {
+    public static String describeRootCause(Throwable error) {
+        Throwable cause = rootCause(error);
+
+        String detail = cause.getMessage();
+        if (detail == null || detail.isBlank()) {
+            return cause.getClass().getSimpleName();
+        }
+
+        return detail.replace('\n', ' ').replace('\r', ' ');
+    }
+
+    private static Throwable unwrap(Throwable error) {
         Throwable current = error;
 
         while ((current instanceof CompletionException || current instanceof ExecutionException)

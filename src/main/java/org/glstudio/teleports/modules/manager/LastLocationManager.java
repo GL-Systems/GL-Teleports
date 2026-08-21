@@ -4,7 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.Failures;
+import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.StoredLocation;
 
 import java.util.UUID;

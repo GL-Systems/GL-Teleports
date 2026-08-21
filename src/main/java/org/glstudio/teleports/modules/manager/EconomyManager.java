@@ -2,7 +2,7 @@ package org.glstudio.teleports.modules.manager;
 
 import lombok.Getter;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.Permissions;
+import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.glstudio.nexus.utils.LoggerUtils;
 import net.milkbowl.vault.economy.Economy;

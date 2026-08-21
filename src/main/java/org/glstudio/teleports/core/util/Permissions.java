@@ -1,4 +1,4 @@
-package org.glstudio.teleports.core;
+package org.glstudio.teleports.core.util;
 
 public final class Permissions {
     private static final String ROOT = "golden.teleports.";

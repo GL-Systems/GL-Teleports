@@ -1,4 +1,4 @@
-package org.glstudio.teleports.core;
+package org.glstudio.teleports.core.util;
 
 import org.bukkit.command.CommandSender;
 import org.glstudio.teleports.GTeleports;

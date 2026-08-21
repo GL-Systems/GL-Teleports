@@ -1,4 +1,4 @@
-package org.glstudio.teleports.core;
+package org.glstudio.teleports.common.config;
 
 import org.bukkit.Particle;
 import org.bukkit.Sound;

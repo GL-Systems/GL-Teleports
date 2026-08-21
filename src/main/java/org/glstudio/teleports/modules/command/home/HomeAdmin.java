@@ -4,7 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.Permissions;
+import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.teleports.modules.model.PlayerRef;
 

@@ -1,7 +1,7 @@
 package org.glstudio.teleports.modules.listener;
 
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.Failures;
+import org.glstudio.teleports.core.util.Failures;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;

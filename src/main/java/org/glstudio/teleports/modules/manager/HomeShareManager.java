@@ -2,8 +2,8 @@ package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.entity.Player;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.Failures;
-import org.glstudio.teleports.core.TeleportNames;
+import org.glstudio.teleports.core.util.Failures;
+import org.glstudio.teleports.core.util.TeleportNames;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.teleports.modules.model.HomeShare;
 import org.glstudio.teleports.modules.model.PlayerRef;

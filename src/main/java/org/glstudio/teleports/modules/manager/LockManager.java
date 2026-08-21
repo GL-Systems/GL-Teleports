@@ -3,7 +3,7 @@ package org.glstudio.teleports.modules.manager;
 import org.bukkit.command.CommandSender;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.common.network.packets.InvalidationScope;
-import org.glstudio.teleports.core.Failures;
+import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.DestinationLock;
 
 import java.util.List;

@@ -9,10 +9,11 @@ import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.Failures;
+import org.glstudio.teleports.core.util.Diagnostics;
+import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
-import org.glstudio.teleports.core.MultiServerSettings;
-import org.glstudio.teleports.core.Permissions;
+import org.glstudio.teleports.common.config.MultiServerSettings;
+import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.command.home.HomeAdmin;
 import org.glstudio.teleports.modules.model.DestinationLock;
 import org.glstudio.teleports.modules.model.TeleportRecord;
@@ -293,7 +294,7 @@ public class GLTeleportsCommand extends Command {
 
         plugin.getMessages().reset();
         plugin.getSettings().reset();
-        org.glstudio.teleports.core.StartupService.applyNexusMessages(plugin);
+        plugin.getMessages().applyToNexus();
 
         Failures.log(plugin.getDatabaseManager().getProvider().reload(), "GLTeleportsCommand#reloadProvider");
         plugin.getWarpManager().invalidateCache();
@@ -323,23 +324,10 @@ public class GLTeleportsCommand extends Command {
             try {
                 new YamlConfiguration().load(file);
             } catch (IOException | InvalidConfigurationException e) {
-                return name + " (" + rootCause(e) + ")";
+                return name + " (" + Diagnostics.describeRootCause(e) + ")";
             }
         }
         return null;
-    }
-
-    private String rootCause(Throwable error) {
-        Throwable cause = error;
-        while (cause.getCause() != null) {
-            cause = cause.getCause();
-        }
-
-        String detail = cause.getMessage();
-        if (detail == null || detail.isBlank()) {
-            return cause.getClass().getSimpleName();
-        }
-        return detail.replace('\n', ' ').replace('\r', ' ');
     }
 
     @Override

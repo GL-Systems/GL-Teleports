@@ -6,7 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.Failures;
+import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.TeleportRecord;
 import org.glstudio.teleports.modules.model.TeleportType;
 

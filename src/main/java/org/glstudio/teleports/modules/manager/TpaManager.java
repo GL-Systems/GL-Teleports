@@ -13,7 +13,7 @@ import org.glstudio.teleports.common.network.packets.TpaResponse;
 import org.glstudio.teleports.common.network.packets.TpaResponsePacket;
 import org.glstudio.teleports.common.network.packets.TpaTravelPacket;
 import org.glstudio.teleports.common.storage.redis.NetworkPlayer;
-import org.glstudio.teleports.core.Failures;
+import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.glstudio.teleports.modules.model.TpaRequest;
 

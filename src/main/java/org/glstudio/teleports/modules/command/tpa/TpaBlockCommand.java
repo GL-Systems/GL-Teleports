@@ -7,7 +7,7 @@ import org.bukkit.entity.Player;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.Failures;
+import org.glstudio.teleports.core.util.Failures;
 
 import java.util.List;
 import java.util.UUID;
