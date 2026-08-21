@@ -134,7 +134,7 @@ public class CrossServerManager {
 
             TeleportRequestPacket packet = new TeleportRequestPacket(
                     settings.getServerName(), settings.getInstanceId(), targetServer,
-                    uuid, playerName, type, destination);
+                    uuid, playerName, type, destination, destinationName);
 
             packetHandler.send(packet).whenComplete((result, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
                 if (error != null) {
@@ -368,7 +368,8 @@ public class CrossServerManager {
     private void finishPlacedArrival(Player player, PendingTeleport pending) {
         Location target = pending.getResolved();
 
-        plugin.getTeleportManager().completePlacedArrival(player, target, pending.getType());
+        plugin.getTeleportManager().completePlacedArrival(player, target, pending.getType(),
+                pending.getDestinationName());
         confirmPlacement(player, target, pending);
     }
 
@@ -451,7 +452,8 @@ public class CrossServerManager {
             return;
         }
 
-        Location placed = plugin.getTeleportManager().completeArrival(player, location, pending.getType());
+        Location placed = plugin.getTeleportManager().completeArrival(player, location, pending.getType(),
+                pending.getDestinationName());
 
         if (placed != null) {
             confirmPlacement(player, placed, pending);

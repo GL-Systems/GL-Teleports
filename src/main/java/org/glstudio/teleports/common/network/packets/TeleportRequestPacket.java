@@ -25,12 +25,13 @@ public class TeleportRequestPacket extends Packet {
     private final double z;
     private final float yaw;
     private final float pitch;
+    private final String destinationName;
 
     private final long timestamp;
 
     public TeleportRequestPacket(String sourceServer, String sourceInstance, String targetServer,
                                  UUID playerUuid, String playerName, TeleportType teleportType,
-                                 TeleportDestination destination) {
+                                 TeleportDestination destination, String destinationName) {
         this.sourceServer = sourceServer;
         this.sourceInstance = sourceInstance;
         this.targetServer = targetServer;
@@ -43,11 +44,12 @@ public class TeleportRequestPacket extends Packet {
         this.z = destination.getZ();
         this.yaw = destination.getYaw();
         this.pitch = destination.getPitch();
+        this.destinationName = destinationName;
         this.timestamp = System.currentTimeMillis();
     }
 
     public PendingTeleport toPendingTeleport(long expiresAt) {
-        return new PendingTeleport(teleportType, world, x, y, z, yaw, pitch, expiresAt);
+        return new PendingTeleport(teleportType, world, x, y, z, yaw, pitch, expiresAt, destinationName);
     }
 
     @Override

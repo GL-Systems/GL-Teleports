@@ -163,6 +163,8 @@ reload:
 
 # Teleport messages
 teleport:
+  # {name} is the home or warp arrived at, the other player for tpa and tpahere, and the server
+  # name for spawn. It is empty for teleports with nothing to name.
   success: "<green>Teleported successfully!</green>"
   delay-cancelled: "<red>Teleport cancelled!</red>"
   transferring: "<yellow>Sending you to <gold>{server}</gold>...</yellow>"

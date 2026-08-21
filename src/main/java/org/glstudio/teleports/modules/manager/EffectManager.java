@@ -50,7 +50,8 @@ public class EffectManager {
         CANCELLED
     }
 
-    public void playTeleportEffects(Player player, TeleportType type, EffectStage stage) {
+    public void playTeleportEffects(Player player, TeleportType type, EffectStage stage,
+                                    String destinationName) {
         String basePath = basePath(type, stage);
 
         boolean defaultEnabled = stage == EffectStage.DELAY_TICK || stage == EffectStage.TELEPORT;
@@ -61,8 +62,8 @@ public class EffectManager {
 
         playSound(player, basePath);
         playParticles(player, basePath);
-        playTitle(player, basePath);
-        playActionBar(player, basePath);
+        playTitle(player, basePath, destinationName);
+        playActionBar(player, basePath, destinationName);
     }
 
     private static String basePath(TeleportType type, EffectStage stage) {
@@ -70,7 +71,8 @@ public class EffectManager {
                 + stage.name().toLowerCase(java.util.Locale.ROOT).replace('_', '-');
     }
 
-    public void playDelayEffects(Player player, TeleportType type, int remainingSeconds, int totalSeconds) {
+    public void playDelayEffects(Player player, TeleportType type, int remainingSeconds, int totalSeconds,
+                                 String destinationName) {
         String basePath = "effects." + type.getConfigKey() + ".delay-tick";
 
         if (!plugin.getSettings().getBoolean(basePath + ".enabled", true)) {
@@ -94,11 +96,11 @@ public class EffectManager {
         String actionBarText = plugin.getSettings().getString(basePath + ".actionbar.text", "");
         if (actionBarText != null && !actionBarText.isEmpty()) {
             actionBarText = actionBarText.replace("{time}", String.valueOf(remainingSeconds));
-            Component component = miniMessage.deserialize(actionBarText);
+            Component component = miniMessage.deserialize(applyName(actionBarText, destinationName));
             player.sendActionBar(component);
         }
 
-        updateBossBar(player, basePath, remainingSeconds, totalSeconds);
+        updateBossBar(player, basePath, remainingSeconds, totalSeconds, destinationName);
     }
 
     private void playSound(Player player, String basePath) {
@@ -133,13 +135,15 @@ public class EffectManager {
         }
     }
 
-    private void playTitle(Player player, String basePath) {
+    private void playTitle(Player player, String basePath, String destinationName) {
         if (!plugin.getSettings().getBoolean(basePath + ".title.enabled", false)) {
             return;
         }
 
-        String titleText = plugin.getSettings().getString(basePath + ".title.text", "");
-        String subtitleText = plugin.getSettings().getString(basePath + ".title.subtitle", "");
+        String titleText = applyName(
+                plugin.getSettings().getString(basePath + ".title.text", ""), destinationName);
+        String subtitleText = applyName(
+                plugin.getSettings().getString(basePath + ".title.subtitle", ""), destinationName);
 
         if (titleText.isEmpty() && subtitleText.isEmpty()) {
             return;
@@ -165,12 +169,12 @@ public class EffectManager {
         player.showTitle(titleObj);
     }
 
-    private void playActionBar(Player player, String basePath) {
+    private void playActionBar(Player player, String basePath, String destinationName) {
         if (!plugin.getSettings().getBoolean(basePath + ".actionbar.enabled", false)) {
             return;
         }
 
-        String text = plugin.getSettings().getString(basePath + ".actionbar.text", "");
+        String text = applyName(plugin.getSettings().getString(basePath + ".actionbar.text", ""), destinationName);
         if (text.isEmpty()) {
             return;
         }
@@ -179,7 +183,8 @@ public class EffectManager {
         player.sendActionBar(component);
     }
 
-    private void updateBossBar(Player player, String basePath, int remainingSeconds, int totalSeconds) {
+    private void updateBossBar(Player player, String basePath, int remainingSeconds, int totalSeconds,
+                               String destinationName) {
         if (!plugin.getSettings().getBoolean(basePath + ".bossbar.enabled", false)) {
             return;
         }
@@ -192,7 +197,7 @@ public class EffectManager {
         }
 
         String text = plugin.getSettings().getString(basePath + ".bossbar.text", "Teleporting in {time}s");
-        text = text.replace("{time}", String.valueOf(remainingSeconds));
+        text = applyName(text.replace("{time}", String.valueOf(remainingSeconds)), destinationName);
 
         float progress = totalSeconds <= 0 ? 1.0f
                 : Math.max(0.0f, Math.min(1.0f, (float) remainingSeconds / totalSeconds));
@@ -213,6 +218,14 @@ public class EffectManager {
             bossBar.name(miniMessage.deserialize(text));
             bossBar.progress(progress);
         }
+    }
+
+    private static String applyName(String text, String destinationName) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+
+        return text.replace("{name}", destinationName == null ? "" : destinationName);
     }
 
     public void safeDisable() {

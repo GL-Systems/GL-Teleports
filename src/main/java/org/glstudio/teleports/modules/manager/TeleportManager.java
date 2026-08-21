@@ -52,8 +52,9 @@ public class TeleportManager {
 
         run(player, player.getLocation(), type, rules, destinationName, false, success -> {
         }, target -> {
-            plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT);
-            setCooldown(player, type, rules);
+            plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT,
+                    destinationName);
+            setCooldown(player, type, rules, destinationName);
             onReady.run();
         });
     }
@@ -88,7 +89,7 @@ public class TeleportManager {
 
         Location resolved = target;
 
-        plugin.getDelayManager().startDelay(player, resolved, type, rules.delaySeconds(), () -> {
+        plugin.getDelayManager().startDelay(player, resolved, type, rules.delaySeconds(), destinationName, () -> {
             if (!player.isOnline()) {
                 callback.accept(false);
                 return;
@@ -136,7 +137,8 @@ public class TeleportManager {
         }
     }
 
-    public Location completeArrival(Player player, Location destination, TeleportType type) {
+    public Location completeArrival(Player player, Location destination, TeleportType type,
+                                    String destinationName) {
         if (plugin.getBlacklistWorldManager().isBlacklisted(player, destination.getWorld(), type)) {
             LoggerUtils.logWarn("Not placing " + player.getName() + " at their " + type
                     + " destination: world '" + destination.getWorld().getName() + "' is in blacklist."
@@ -161,28 +163,31 @@ public class TeleportManager {
 
         Location origin = player.getLocation().clone();
 
-        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT_ARRIVE);
+        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT_ARRIVE,
+                destinationName);
         plugin.getEffectManager().clearBossBar(player);
 
         player.teleport(target);
 
         applyImmunity(player, type);
 
-        plugin.getMessages().send(player, "teleport.success");
+        sendArrivalMessage(player, destinationName);
 
-        Events.call(new PostTeleportEvent(player, type, origin, target, null, true));
+        Events.call(new PostTeleportEvent(player, type, origin, target, destinationName, true));
         return target;
     }
 
-    public void completePlacedArrival(Player player, Location destination, TeleportType type) {
-        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT_ARRIVE);
+    public void completePlacedArrival(Player player, Location destination, TeleportType type,
+                                      String destinationName) {
+        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT_ARRIVE,
+                destinationName);
         plugin.getEffectManager().clearBossBar(player);
 
         applyImmunity(player, type);
 
-        plugin.getMessages().send(player, "teleport.success");
+        sendArrivalMessage(player, destinationName);
 
-        Events.call(new PostTeleportEvent(player, type, destination, destination, null, true));
+        Events.call(new PostTeleportEvent(player, type, destination, destination, destinationName, true));
     }
 
     private void completeTeleport(Player player, Location destination, TeleportType type,
@@ -193,7 +198,8 @@ public class TeleportManager {
 
         if (!Events.callAndExplain(event, player, event.getCancelMessage())) {
             plugin.getEffectManager().clearBossBar(player);
-            plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.CANCELLED);
+            plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.CANCELLED,
+                    destinationName);
             plugin.getEconomyManager().refund(player, rules.cost());
             plugin.getHistoryManager().recordFailure(player, type, destinationName, origin, "CANCELLED_BY_PLUGIN");
             callback.accept(false);
@@ -218,18 +224,20 @@ public class TeleportManager {
 
     private void move(Player player, Location origin, Location destination, TeleportType type,
                       TeleportRules rules, String destinationName, Consumer<Boolean> callback) {
-        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT);
+        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT,
+                destinationName);
         plugin.getEffectManager().clearBossBar(player);
 
         player.teleport(destination);
 
-        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT_ARRIVE);
+        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT_ARRIVE,
+                destinationName);
 
-        setCooldown(player, type, rules);
+        setCooldown(player, type, rules, destinationName);
 
         applyImmunity(player, type);
 
-        plugin.getMessages().send(player, "teleport.success");
+        sendArrivalMessage(player, destinationName);
 
         plugin.getHistoryManager().record(player, type, destinationName, origin, destination, rules.cost());
         Events.call(new PostTeleportEvent(player, type, origin, destination, destinationName, false));
@@ -237,12 +245,17 @@ public class TeleportManager {
         callback.accept(true);
     }
 
-    private void setCooldown(Player player, TeleportType type, TeleportRules rules) {
+    private void sendArrivalMessage(Player player, String destinationName) {
+        plugin.getMessages().send(player, "teleport.success",
+                "{name}", destinationName == null ? "" : destinationName);
+    }
+
+    private void setCooldown(Player player, TeleportType type, TeleportRules rules, String destinationName) {
         plugin.getCooldownManager().setCooldown(player, type, rules.cooldownSeconds());
 
         if (rules.cooldownSeconds() > 0) {
             plugin.getEffectManager().playTeleportEffects(player, type,
-                    EffectManager.EffectStage.COOLDOWN_START);
+                    EffectManager.EffectStage.COOLDOWN_START, destinationName);
         }
     }
 

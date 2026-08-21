@@ -29,11 +29,11 @@ public class DelayManager {
     public void startDelay(Player player, Location destination, TeleportType type, Runnable onComplete) {
         startDelay(player, destination, type,
                 plugin.getSettings().getInt("teleport-settings." + type.getConfigKey() + ".delay", 0),
-                onComplete);
+                null, onComplete);
     }
 
     public void startDelay(Player player, Location destination, TeleportType type, int delaySeconds,
-                           Runnable onComplete) {
+                           String destinationName, Runnable onComplete) {
         if (player.hasPermission(BYPASS_PERMISSION)) {
             onComplete.run();
             return;
@@ -46,9 +46,11 @@ public class DelayManager {
 
         cancelDelay(player, false);
 
-        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.DELAY_START);
+        plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.DELAY_START,
+                destinationName);
 
-        DelayData data = new DelayData(player.getLocation().clone(), destination, type, delaySeconds, onComplete);
+        DelayData data = new DelayData(player.getLocation().clone(), destination, type, delaySeconds,
+                destinationName, onComplete);
         delays.put(player.getUniqueId(), data);
 
         data.task = new BukkitRunnable() {
@@ -75,7 +77,7 @@ public class DelayManager {
                 }
 
                 plugin.getEffectManager().playDelayEffects(player, type,
-                        current.remainingSeconds, current.totalSeconds);
+                        current.remainingSeconds, current.totalSeconds, current.destinationName);
                 current.remainingSeconds--;
             }
         }.runTaskTimer(plugin, 0L, 20L);
@@ -99,7 +101,7 @@ public class DelayManager {
 
         if (notify) {
             plugin.getEffectManager().playTeleportEffects(player, data.type,
-                    EffectManager.EffectStage.CANCELLED);
+                    EffectManager.EffectStage.CANCELLED, data.destinationName);
             plugin.getMessages().send(player, "teleport.delay-cancelled");
         }
     }
@@ -146,18 +148,21 @@ public class DelayManager {
         final Location startLocation;
         final Location destination;
         final TeleportType type;
+        final String destinationName;
         final Runnable onComplete;
         final int totalSeconds;
 
         int remainingSeconds;
         BukkitTask task;
 
-        DelayData(Location startLocation, Location destination, TeleportType type, int seconds, Runnable onComplete) {
+        DelayData(Location startLocation, Location destination, TeleportType type, int seconds,
+                  String destinationName, Runnable onComplete) {
             this.startLocation = startLocation;
             this.destination = destination;
             this.type = type;
             this.totalSeconds = seconds;
             this.remainingSeconds = seconds;
+            this.destinationName = destinationName;
             this.onComplete = onComplete;
         }
     }

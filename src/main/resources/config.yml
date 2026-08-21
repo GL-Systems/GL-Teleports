@@ -179,6 +179,15 @@ safety:
     - "CRAMMING"
 
 # Effects configuration
+#
+# Two placeholders are substituted into every title, subtitle, actionbar and bossbar below:
+#
+#   {time}  seconds left before the teleport fires. Only meaningful under delay-tick - the
+#           other stages have no countdown left to show.
+#   {name}  what the teleport is headed for: the home or warp name, the other player for tpa
+#           and tpahere, the server name for spawn. Teleports with nothing to name - the ones
+#           started through the API without a destination name - drop it rather than leaving
+#           the placeholder on screen.
 effects:
   home:
     delay-tick:
@@ -213,7 +222,7 @@ effects:
         count: 50
       title:
         enabled: true
-        text: "<gradient:#00ff00:#00ffff>Home</gradient>"
+        text: "<gradient:#00ff00:#00ffff>{name}</gradient>"
         subtitle: "<gray>Welcome back!</gray>"
         fade-in: 10
         stay: 40
@@ -252,7 +261,7 @@ effects:
         count: 50
       title:
         enabled: true
-        text: "<gradient:#0000ff:#00ffff>Warp</gradient>"
+        text: "<gradient:#0000ff:#00ffff>{name}</gradient>"
         subtitle: ""
         fade-in: 10
         stay: 40
@@ -292,7 +301,7 @@ effects:
       title:
         enabled: true
         text: "<gradient:#ff00ff:#ff00aa>TPA</gradient>"
-        subtitle: ""
+        subtitle: "<gray>{name}</gray>"
         fade-in: 10
         stay: 40
         fade-out: 10
@@ -331,7 +340,7 @@ effects:
       title:
         enabled: true
         text: "<gradient:#ff00ff:#ff00aa>TPA Here</gradient>"
-        subtitle: ""
+        subtitle: "<gray>{name}</gray>"
         fade-in: 10
         stay: 40
         fade-out: 10

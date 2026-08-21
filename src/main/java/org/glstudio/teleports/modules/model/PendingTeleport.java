@@ -17,13 +17,14 @@ public class PendingTeleport {
     private float yaw;
     private float pitch;
     private long expiresAt;
+    private String destinationName;
 
     private transient Location resolved;
 
     private transient boolean placedAtLogin;
 
     public PendingTeleport(TeleportType type, String world, double x, double y, double z,
-                           float yaw, float pitch, long expiresAt) {
+                           float yaw, float pitch, long expiresAt, String destinationName) {
         this.type = type;
         this.world = world;
         this.x = x;
@@ -32,6 +33,7 @@ public class PendingTeleport {
         this.yaw = yaw;
         this.pitch = pitch;
         this.expiresAt = expiresAt;
+        this.destinationName = destinationName;
     }
 
     public Location toLocation() {
