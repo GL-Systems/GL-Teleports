@@ -130,7 +130,9 @@ public class CrossServerManager {
                 return;
             }
 
-            plugin.getMessages().send(player, "teleport.transferring", "{server}", targetServer);
+            if (player.isOp()) {
+                plugin.getMessages().send(player, "teleport.transferring", "{server}", targetServer);
+            }
 
             TeleportRequestPacket packet = new TeleportRequestPacket(
                     settings.getServerName(), settings.getInstanceId(), targetServer,
