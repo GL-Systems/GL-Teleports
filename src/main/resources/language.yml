@@ -98,6 +98,9 @@ errors:
   back-disabled: "<red>/back is turned off on this server.</red>"
   back-destination-blacklisted: "<red>You cannot go back there.</red>"
 
+  no-last-location: "<red>There is no saved logout location for <yellow>{player}</yellow> on this server.</red>"
+  last-location-disabled: "<red>Logout locations are not being saved (last-location.enabled is off in config.yml).</red>"
+
   # Safety errors
   unsafe-location:
     void: "<red>That location is in the void!</red>"
@@ -303,6 +306,8 @@ teleport:
   transferring: "<yellow>Sending you to <gold>{server}</gold>...</yellow>"
   refunded: "<green><yellow>{cost}</yellow> has been returned to you.</green>"
   returned: "<gray>Returned to where you left this server.</gray>"
+  tpoffline-arrived: "<green>Teleported to where <yellow>{player}</yellow> last logged out.</green>"
+  tpoffline-online: "<green><yellow>{player}</yellow> is online; teleported to their current position.</green>"
   # Only shown once the queue is deeper than queue.notice-threshold; below that the wait is a
   # tick or two and saying anything would be noise.
   queued: "<gray>Teleporting shortly... (<yellow>{position}</yellow> ahead of you)</gray>"
@@ -450,3 +455,4 @@ usage:
   homeinvites: '<gray>/homeinvites [received|given]</gray>'
   pw: '<gray>/pw \<warp>  |  /pw set \<name> [player]  |  /pw remove \<warp>  |  /pw list [page] [player]  |  /pw settings \<warp>  |  see the wiki for the full subcommand list</gray>'
   back: '<gray>/back</gray>'
+  tpoffline: '<gray>/tpoffline \<player></gray>'

@@ -57,6 +57,11 @@ public class LastLocationManager {
                 "LastLocationManager#save");
     }
 
+    public CompletableFuture<StoredLocation> find(UUID uuid) {
+        return plugin.getDatabaseManager().getProvider().getLastLocation(uuid,
+                plugin.getCrossServerManager().currentServer());
+    }
+
     public void restore(Player player) {
         if (!isEnabled()) {
             return;

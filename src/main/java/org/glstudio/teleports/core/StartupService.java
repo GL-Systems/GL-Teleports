@@ -32,6 +32,7 @@ import org.glstudio.teleports.modules.command.tpa.TpaCancelCommand;
 import org.glstudio.teleports.modules.command.tpa.TpaCommand;
 import org.glstudio.teleports.modules.command.tpa.TpaHereCommand;
 import org.glstudio.teleports.modules.command.tpa.TpaToggleCommand;
+import org.glstudio.teleports.modules.command.tpoffline.TpOfflineCommand;
 import org.glstudio.teleports.modules.command.warp.DelWarpCommand;
 import org.glstudio.teleports.modules.command.warp.EditWarpCommand;
 import org.glstudio.teleports.modules.command.warp.SetWarpCommand;
@@ -432,6 +433,8 @@ public class StartupService {
 
             register(manager, new org.glstudio.teleports.modules.command.back.BackCommand(
                     manager, "back", Permissions.BACK_USE, plugin));
+
+            register(manager, new TpOfflineCommand(manager, "tpoffline", Permissions.ADMIN_TPOFFLINE, plugin));
 
             LoggerUtils.logSuccess("Commands registered.");
             return true;

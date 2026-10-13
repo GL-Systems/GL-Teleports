@@ -70,6 +70,7 @@ public final class Permissions {
     public static final String ADMIN_HISTORY = ROOT + "admin.history";
     public static final String ADMIN_LOCK = ROOT + "admin.lock";
     public static final String ADMIN_MIGRATE = ROOT + "admin.migrate";
+    public static final String ADMIN_TPOFFLINE = ROOT + "admin.tpoffline";
 
     public static final String BYPASS_LOCK = ROOT + "bypass.lock";
 

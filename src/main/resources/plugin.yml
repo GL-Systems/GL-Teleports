@@ -180,6 +180,7 @@ permissions:
       golden.teleports.admin.history: true
       golden.teleports.admin.lock: true
       golden.teleports.admin.migrate: true
+      golden.teleports.admin.tpoffline: true
       golden.teleports.home.admin: true
       golden.teleports.warp.set: true
       golden.teleports.warp.delete: true
@@ -218,6 +219,9 @@ permissions:
     default: op
   golden.teleports.admin.migrate:
     description: Import homes, warps and player warps from EssentialsX, HuskHomes or PlayerWarps with /glteleports migrate.
+    default: op
+  golden.teleports.admin.tpoffline:
+    description: Teleport to where a player last logged out on this server with /tpoffline.
     default: op
   golden.teleports.home.admin:
     description: Read and edit the homes of other players.
