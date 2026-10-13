@@ -39,7 +39,7 @@ import org.glstudio.teleports.modules.command.warp.WarpCommand;
 import org.glstudio.teleports.modules.command.warp.WarpsCommand;
 import org.glstudio.teleports.api.GLTeleportsAPI;
 import org.glstudio.teleports.api.TeleportsAPI;
-import org.glstudio.teleports.common.menu.MenuManager;
+import org.glstudio.nexus.modules.menu.MenuManager;
 import org.glstudio.teleports.common.network.PacketHandler;
 import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
 import org.glstudio.teleports.common.storage.redis.RedisService;
@@ -51,13 +51,17 @@ import org.glstudio.teleports.modules.command.tpa.TpaBlockCommand;
 import org.glstudio.teleports.modules.database.DatabaseManager;
 import org.glstudio.teleports.modules.placeholder.TeleportsExpansion;
 import org.glstudio.teleports.modules.listener.ArrivalListener;
+import org.glstudio.teleports.modules.listener.BedRespawnListener;
 import org.glstudio.teleports.modules.listener.DamageListener;
 import org.glstudio.teleports.modules.listener.LoginPlacementListener;
 import org.glstudio.teleports.modules.listener.MoveListener;
 import org.glstudio.teleports.modules.listener.PresenceListener;
 import org.glstudio.teleports.modules.listener.QuitListener;
 import org.glstudio.teleports.modules.listener.RespawnListener;
+import org.glstudio.teleports.modules.manager.BackManager;
+import org.glstudio.teleports.modules.manager.BedRespawnManager;
 import org.glstudio.teleports.modules.manager.BlacklistWorldManager;
+import org.glstudio.teleports.modules.manager.ChatInputManager;
 import org.glstudio.teleports.modules.manager.CooldownManager;
 import org.glstudio.teleports.modules.manager.CrossServerManager;
 import org.glstudio.teleports.modules.manager.DelayManager;
@@ -69,6 +73,16 @@ import org.glstudio.teleports.modules.manager.HomeShareManager;
 import org.glstudio.teleports.modules.manager.LastLocationManager;
 import org.glstudio.teleports.modules.manager.LockManager;
 import org.glstudio.teleports.modules.manager.PlayerSettingsManager;
+import org.glstudio.teleports.modules.manager.PlayerWarpBanManager;
+import org.glstudio.teleports.modules.manager.PlayerWarpCategoryRegistry;
+import org.glstudio.teleports.modules.manager.PlayerWarpFavouriteManager;
+import org.glstudio.teleports.modules.manager.PlayerWarpLimits;
+import org.glstudio.teleports.modules.manager.PlayerWarpManager;
+import org.glstudio.teleports.modules.manager.PlayerWarpManagerRoleManager;
+import org.glstudio.teleports.modules.manager.PlayerWarpRatingManager;
+import org.glstudio.teleports.modules.manager.PlayerWarpSponsorManager;
+import org.glstudio.teleports.modules.manager.PlayerWarpWhitelistManager;
+import org.glstudio.teleports.modules.service.PlayerWarpPurgeService;
 import org.glstudio.teleports.modules.manager.SpawnManager;
 import org.glstudio.teleports.modules.manager.TeleportManager;
 import org.glstudio.teleports.modules.manager.TeleportQueue;
@@ -76,6 +90,7 @@ import org.glstudio.teleports.modules.manager.TeleportSafetyManager;
 import org.glstudio.teleports.modules.manager.TpaBlockManager;
 import org.glstudio.teleports.modules.manager.TpaManager;
 import org.glstudio.teleports.modules.manager.WarpManager;
+import org.glstudio.teleports.modules.migration.MigrationManager;
 import org.glstudio.teleports.modules.transfer.BungeePlayerTransferService;
 import org.glstudio.teleports.modules.transfer.PlayerTransferService;
 
@@ -150,7 +165,8 @@ public class StartupService {
         List<Tracked> files = List.of(
                 new Tracked("config.yml", plugin.getConfigManager().getMainConfig()),
                 new Tracked("language.yml", plugin.getConfigManager().getLanguageConfig()),
-                new Tracked("database.yml", plugin.getConfigManager().getDatabaseConfig()));
+                new Tracked("database.yml", plugin.getConfigManager().getDatabaseConfig()),
+                new Tracked("player-warps.yml", plugin.getConfigManager().getPlayerWarpsConfig()));
 
         for (Tracked tracked : files) {
             int found = tracked.file().getInt("config-version", 0);
@@ -306,9 +322,28 @@ public class StartupService {
             plugin.setTpaManager(new TpaManager(plugin));
             plugin.setWarpManager(new WarpManager(plugin));
             plugin.setSpawnManager(new SpawnManager(plugin));
+            plugin.setBedRespawnManager(new BedRespawnManager(plugin));
             plugin.setPlayerSettings(new PlayerSettingsManager(plugin));
             plugin.setHomeShareManager(new HomeShareManager(plugin));
             plugin.setTpaBlockManager(new TpaBlockManager(plugin));
+
+            plugin.setChatInputManager(new ChatInputManager(plugin));
+            plugin.setPlayerWarpCategoryRegistry(new PlayerWarpCategoryRegistry(plugin));
+            plugin.setPlayerWarpLimits(new PlayerWarpLimits(plugin));
+            plugin.setPlayerWarpWhitelistManager(new PlayerWarpWhitelistManager(plugin));
+            plugin.setPlayerWarpBanManager(new PlayerWarpBanManager(plugin));
+            plugin.setPlayerWarpManagerRoleManager(new PlayerWarpManagerRoleManager(plugin));
+            plugin.setPlayerWarpRatingManager(new PlayerWarpRatingManager(plugin));
+            plugin.setPlayerWarpFavouriteManager(new PlayerWarpFavouriteManager(plugin));
+            plugin.setPlayerWarpSponsorManager(new PlayerWarpSponsorManager(plugin));
+            plugin.setPlayerWarpManager(new PlayerWarpManager(plugin));
+
+            plugin.setBackManager(new BackManager(plugin));
+            plugin.setMigrationManager(new MigrationManager(plugin));
+
+            PlayerWarpPurgeService playerWarpPurgeService = new PlayerWarpPurgeService(plugin);
+            playerWarpPurgeService.schedule();
+            plugin.setPlayerWarpPurgeService(playerWarpPurgeService);
 
             HistoryManager history = new HistoryManager(plugin);
             history.startPurge();
@@ -344,6 +379,8 @@ public class StartupService {
         pluginManager.registerEvents(new DamageListener(plugin), plugin);
         pluginManager.registerEvents(new QuitListener(plugin), plugin);
         pluginManager.registerEvents(new RespawnListener(plugin), plugin);
+        pluginManager.registerEvents(new BedRespawnListener(plugin), plugin);
+        pluginManager.registerEvents(new org.glstudio.teleports.modules.listener.ChatInputListener(plugin), plugin);
     }
 
     public void registerMultiServerListeners() {
@@ -389,6 +426,12 @@ public class StartupService {
 
             register(manager, new SetSpawnCommand(manager, "setspawn", Permissions.SPAWN_SET, plugin));
             register(manager, new SpawnCommand(manager, "spawn", Permissions.SPAWN_USE, plugin));
+
+            register(manager, new org.glstudio.teleports.modules.command.playerwarp.PlayerWarpCommand(
+                    manager, "pw", Permissions.PLAYERWARP_USE, plugin));
+
+            register(manager, new org.glstudio.teleports.modules.command.back.BackCommand(
+                    manager, "back", Permissions.BACK_USE, plugin));
 
             LoggerUtils.logSuccess("Commands registered.");
             return true;

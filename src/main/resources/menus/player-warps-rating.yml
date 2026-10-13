@@ -1,0 +1,47 @@
+# Star picker for /pw rate, reached from a warp's info screen. Picking a star opens a chat
+# prompt for the optional comment, then submits both together.
+#
+# Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA
+# section of purely decorative extra items is supported the same way - see the top of
+# player-warps-list.yml for the full explanation and examples.
+title: "&8Rate: %name%"
+size: 27
+
+items:
+  star-1:
+    slot: 10
+    material: GRAY_DYE
+    name: "&f★☆☆☆☆ &7(1)"
+    lore: ["&eClick to rate 1 star"]
+  star-2:
+    slot: 11
+    material: YELLOW_DYE
+    name: "&e★★☆☆☆ &7(2)"
+    lore: ["&eClick to rate 2 stars"]
+  star-3:
+    slot: 13
+    material: YELLOW_DYE
+    name: "&e★★★☆☆ &7(3)"
+    lore: ["&eClick to rate 3 stars"]
+  star-4:
+    slot: 15
+    material: YELLOW_DYE
+    name: "&e★★★★☆ &7(4)"
+    lore: ["&eClick to rate 4 stars"]
+  star-5:
+    slot: 16
+    material: YELLOW_DYE
+    name: "&6★★★★★ &7(5)"
+    lore: ["&eClick to rate 5 stars"]
+
+  back:
+    slot: 18
+    material: SPECTRAL_ARROW
+    name: "&7« Back"
+    lore: []
+
+  close:
+    slot: 26
+    material: BARRIER
+    name: "&c&lClose"
+    lore: []

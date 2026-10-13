@@ -35,9 +35,15 @@ public class TeleportManager {
     public void requestTeleport(Player player, Location destination, TeleportType type,
                                 TeleportDestination destinationObject, String destinationName,
                                 Consumer<Boolean> callback) {
+        requestTeleport(player, destination, type, destinationObject, destinationName, false, callback);
+    }
+
+    public void requestTeleport(Player player, Location destination, TeleportType type,
+                                TeleportDestination destinationObject, String destinationName,
+                                boolean instant, Consumer<Boolean> callback) {
         TeleportRules rules = TeleportRules.resolve(plugin, player, type, destinationObject);
 
-        run(player, destination, type, rules, destinationName, true, callback,
+        run(player, destination, type, rules, destinationName, true, instant, callback,
                 target -> completeTeleport(player, target, type, rules, destinationName, callback));
     }
 
@@ -48,9 +54,15 @@ public class TeleportManager {
     public void requestRemoteTeleport(Player player, TeleportType type,
                                       TeleportDestination destinationObject, String destinationName,
                                       Runnable onReady) {
+        requestRemoteTeleport(player, type, destinationObject, destinationName, false, onReady);
+    }
+
+    public void requestRemoteTeleport(Player player, TeleportType type,
+                                      TeleportDestination destinationObject, String destinationName,
+                                      boolean instant, Runnable onReady) {
         TeleportRules rules = TeleportRules.resolve(plugin, player, type, destinationObject);
 
-        run(player, player.getLocation(), type, rules, destinationName, false, success -> {
+        run(player, player.getLocation(), type, rules, destinationName, false, instant, success -> {
         }, target -> {
             plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT,
                     destinationName);
@@ -60,7 +72,7 @@ public class TeleportManager {
     }
 
     private void run(Player player, Location destination, TeleportType type, TeleportRules rules,
-                     String destinationName, boolean inspectDestination,
+                     String destinationName, boolean inspectDestination, boolean instant,
                      Consumer<Boolean> callback, Consumer<Location> onReady) {
         TeleportResult result = checkRequirements(player, destination, type, rules, inspectDestination);
 
@@ -88,8 +100,9 @@ public class TeleportManager {
         }
 
         Location resolved = target;
+        int delaySeconds = instant ? 0 : rules.delaySeconds();
 
-        plugin.getDelayManager().startDelay(player, resolved, type, rules.delaySeconds(), destinationName, () -> {
+        plugin.getDelayManager().startDelay(player, resolved, type, delaySeconds, destinationName, () -> {
             if (!player.isOnline()) {
                 callback.accept(false);
                 return;
@@ -240,6 +253,7 @@ public class TeleportManager {
         sendArrivalMessage(player, destinationName);
 
         plugin.getHistoryManager().record(player, type, destinationName, origin, destination, rules.cost());
+        plugin.getBackManager().recordBackPoint(player, origin, plugin.getCrossServerManager().currentServer());
         Events.call(new PostTeleportEvent(player, type, origin, destination, destinationName, false));
 
         callback.accept(true);

@@ -1,0 +1,52 @@
+# /pw admin - staff overview of every player warp, plus maintenance actions.
+#
+# Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA
+# section of purely decorative extra items is supported the same way - see the top of
+# player-warps-list.yml for the full explanation and examples.
+title: "&8Player Warps - Admin"
+size: 54
+content-slots: [0,1,2,3,4,5,6,7,8, 9,10,11,12,13,14,15,16,17, 18,19,20,21,22,23,24,25,26, 27,28,29,30,31,32,33,34,35]
+
+items:
+  warp:
+    material: GRASS_BLOCK
+    name: "&a&l%name%"
+    lore:
+      - "&7Owner: &f%owner%"
+      - "&7World: &f%world%"
+      - ""
+      - "&eClick to manage"
+
+  empty:
+    slot: 22
+    material: BARRIER
+    name: "&7No player warps yet"
+    lore: []
+
+  purge:
+    slot: 45
+    material: LAVA_BUCKET
+    name: "&c&lRun Purge Now"
+    lore:
+      - "&7Applies purge.* from player-warps.yml"
+      - "&7immediately, instead of waiting for"
+      - "&7the next scheduled sweep."
+
+  reload:
+    slot: 46
+    material: BOOK
+    name: "&e&lReload Config"
+    lore:
+      - "&7Reloads player-warps.yml and its menus."
+
+  info:
+    slot: 49
+    material: PAPER
+    name: "&eOverview"
+    lore: ["&7Total warps: &f%count%"]
+
+  close:
+    slot: 53
+    material: BARRIER
+    name: "&c&lClose"
+    lore: []

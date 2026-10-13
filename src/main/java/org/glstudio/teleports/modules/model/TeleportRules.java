@@ -36,6 +36,16 @@ public record TeleportRules(double cost, int cooldownSeconds, int delaySeconds) 
             if (warp.getDelay() != null) {
                 delay = warp.getDelay();
             }
+        } else if (destination instanceof PlayerWarp playerWarp) {
+            if (playerWarp.getCost() != null) {
+                cost = playerWarp.getCost();
+            }
+            if (playerWarp.getCooldown() != null) {
+                cooldown = playerWarp.getCooldown();
+            }
+            if (playerWarp.getDelay() != null) {
+                delay = playerWarp.getDelay();
+            }
         }
 
         cooldown = Math.min(cooldown, lowestGranted(player, COOLDOWN_PERMISSION + type.getConfigKey(), cooldown));

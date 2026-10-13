@@ -106,6 +106,26 @@ teleport-settings:
     immunity: 20
     cancel-on-move: false
 
+  # Player warp teleportation (/pw <warp>). A warp's own cost/cooldown/delay - set with
+  # /pw cost set and stored per-warp - override these defaults exactly like an admin /setwarp
+  # override does; permission-capped the same way too.
+  player-warp:
+    delay: 3
+    cooldown: 5
+    cost: 0.0
+    immunity: 20
+    cancel-on-move: true
+
+  # /back - returns to where you were right before your last teleport. Using /back itself counts
+  # as a teleport, so it also sets a new /back point at where you were standing - running it twice
+  # in a row toggles you between the two spots.
+  back:
+    delay: 0
+    cooldown: 5
+    cost: 0.0
+    immunity: 20
+    cancel-on-move: false
+
   # TPA teleportation
   tpa:
     delay: 5
@@ -140,6 +160,11 @@ blacklist:
     - "event_world"
     - "minigame_world"
   warp: []
+  player-warp: []
+  # Worlds /back refuses to use in either direction: it will not save a new /back point while
+  # you're standing in one of these, and it will not teleport you into one even if a point still
+  # points there from before it was added here.
+  back: []
   tpa:
     - "event_world"
   tpahere:
@@ -262,6 +287,84 @@ effects:
       title:
         enabled: true
         text: "<gradient:#0000ff:#00ffff>{name}</gradient>"
+        subtitle: ""
+        fade-in: 10
+        stay: 40
+        fade-out: 10
+
+  player-warp:
+    delay-tick:
+      enabled: true
+      sound:
+        enabled: true
+        type: "BLOCK_NOTE_BLOCK_PLING"
+        volume: 0.5
+        pitch: 1.5
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 10
+      actionbar:
+        enabled: true
+        text: "<light_purple>Teleporting in <yellow>{time}</yellow> seconds...</light_purple>"
+      bossbar:
+        enabled: true
+        text: "<light_purple>Teleporting in <yellow>{time}</yellow> seconds...</light_purple>"
+        color: "PINK"
+
+    teleport:
+      enabled: true
+      sound:
+        enabled: true
+        type: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 1.0
+        pitch: 1.0
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 50
+      title:
+        enabled: true
+        text: "<gradient:#ff66cc:#a020f0>{name}</gradient>"
+        subtitle: "<gray>A player warp</gray>"
+        fade-in: 10
+        stay: 40
+        fade-out: 10
+
+  back:
+    delay-tick:
+      enabled: true
+      sound:
+        enabled: true
+        type: "BLOCK_NOTE_BLOCK_PLING"
+        volume: 0.5
+        pitch: 1.5
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 10
+      actionbar:
+        enabled: true
+        text: "<gray>Teleporting in <yellow>{time}</yellow> seconds...</gray>"
+      bossbar:
+        enabled: true
+        text: "<gray>Teleporting in <yellow>{time}</yellow> seconds...</gray>"
+        color: "WHITE"
+
+    teleport:
+      enabled: true
+      sound:
+        enabled: true
+        type: "ENTITY_ENDERMAN_TELEPORT"
+        volume: 1.0
+        pitch: 1.0
+      particle:
+        enabled: true
+        type: "PORTAL"
+        count: 50
+      title:
+        enabled: true
+        text: "<gradient:#aaaaaa:#ffffff>Back</gradient>"
         subtitle: ""
         fade-in: 10
         stay: 40
@@ -433,9 +536,17 @@ spawn:
   # they slept in.
   respawn-respects-bed: true
 
-  # Note: this only applies on the server that actually holds the network spawn. It never moves
-  # anybody across the network, because a death is a bad moment to hand a player to a proxy -
-  # everywhere else players keep respawning at the world spawn.
+  # The server whose beds and respawn anchors are worth remembering across the network, matching
+  # one of the values used for multi-server.server-name - your main survival server, typically.
+  #
+  # A bed only lives in that server's own player data, so anywhere else on the network has no way
+  # to know about it. Setting this makes GL-Teleports remember that spawn point in the shared
+  # database as well, so dying on a different server sends the player back to their bed here
+  # instead of to the network spawn. Dying on this server itself is unaffected - vanilla already
+  # handles the bed locally.
+  #
+  # Leave empty to turn this off: deaths on another server always go to the network spawn.
+  bed-respawn-server: ""
 
 # The /homes inventory menu.
 #
@@ -507,6 +618,67 @@ performance:
   # happens. Doing it in advance turns a visible stutter into a wait nobody feels. Falls back to
   # the old behaviour if the load times out, so the teleport always happens either way.
   preload-chunks: true
+
+# /back
+back:
+  enabled: true
+
+  # Servers /back refuses to use, same idea as blacklist.back above but for the network side: a
+  # point on one of these servers is never saved, and /back refuses to send you to one even if a
+  # point still names it from before it was added here. Only meaningful with multi-server on;
+  # names are matched against multi-server.server-name.
+  blocked-servers: []
+
+# Importing homes and warps from other plugins: /glteleports migrate <source> [types] [confirm]
+# (PlayerWarps brings player warps with their favourites, ratings, whitelists, managers and bans.)
+# Types: homes, warps, playerwarps, or a comma-separated combination such as homes,playerwarps.
+# Omit types to import everything the source provides. For HuskHomes homes only, use:
+# /glteleports migrate huskhomes homes, then /glteleports migrate huskhomes homes confirm.
+#
+# Running the command first scans the other plugin's data and reports what would be imported,
+# without writing anything. Nothing is imported until you repeat it with "confirm" within two
+# minutes. The other plugin's files and database are only ever read, never changed or deleted.
+# Take a backup of this plugin's data before confirming.
+migrate:
+  # The server to assign imported homes and warps to when multi-server is enabled and the source
+  # does not say which server they belong to - EssentialsX never does, HuskHomes only does when
+  # its own cross_server mode is on, and PlayerWarps only in its MySQL mode. Must match a multi-server.server-name on your network, usually
+  # the server whose data you are importing.
+  #
+  # Ignored while multi-server is off: everything is then assigned to this server, exactly as if
+  # it had been created here. With multi-server on and this left empty, a migration that needs it
+  # stops before writing anything and says so.
+  server: ""
+
+  # With multi-server on, keep the server a source recorded for each entry (HuskHomes in
+  # cross-server mode, PlayerWarps in MySQL mode) instead of assigning everything to the server above.
+  use-source-server: true
+
+  # When an imported home or warp has the same name as one that already exists here:
+  #   skip    - keep the existing one and leave the imported one out
+  #   rename  - import it under a free name such as base-2, keeping both (default)
+  #   replace - overwrite the existing one with the imported one
+  # An entry that already exists here at the same position is never imported twice, whichever
+  # policy is chosen, so running the same migration again is harmless.
+  # Player warps are never replaced, since that would delete another player's warp: with replace
+  # they are left out like with skip. A player warp imported once is recognised on every later run
+  # and left as it is, even if its owner changed it or deleted it since.
+  conflict-policy: "rename"
+
+  # Only changes the world name on newly imported entries. Existing GL-Teleports data and
+  # the source plugin's data are not changed. Remove this rule after the intended migrations
+  # if later imports should keep the source world name.
+  world-mappings:
+    Survival: Survival-2
+
+  # Where each plugin keeps its data. Leave empty to look in its usual folder next to this one
+  # (plugins/Essentials, plugins/HuskHomes, plugins/PlayerWarps). Set a path to read a copy taken
+  # from another server. HuskHomes and PlayerWarps are read from the database their own config.yml
+  # points at, with the same credentials, so nothing has to be configured twice.
+  folders:
+    essentials: ""
+    huskhomes: ""
+    playerwarps: ""
 
 # Miscellaneous settings
 clear-cooldowns-on-quit: false

@@ -1,0 +1,39 @@
+# Category grid. Used both to browse warps by category and, when opened from a warp's manage
+# screen, to assign a category to that warp - the click action changes, the layout does not.
+#
+# Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA
+# section of purely decorative extra items is supported the same way - see the top of
+# player-warps-list.yml for the full explanation and examples.
+title:
+  browse: "&8Browse Categories"
+  assign: "&8Choose a Category"
+
+size: 27
+content-slots: [0,1,2,3,4,5,6,7,8, 9,10,11,12,13,14,15,16,17]
+
+items:
+  category:
+    lore:
+      - "&7%description%"
+      - ""
+      - "&eClick to select"
+
+  none:
+    material: BARRIER
+    name: "&7No Category"
+    lore:
+      - "&7Remove this warp's category."
+      - ""
+      - "&eClick to select"
+
+  back:
+    slot: 22
+    material: SPECTRAL_ARROW
+    name: "&7« Back"
+    lore: []
+
+  close:
+    slot: 26
+    material: BARRIER
+    name: "&c&lClose"
+    lore: []

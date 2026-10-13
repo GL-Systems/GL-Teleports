@@ -1,0 +1,83 @@
+# The /pw main menu - the hub every other player-warp screen is reached from.
+#
+# Top row: the sponsored slots (see player-warps.yml -> sponsored). SPONSORED_SLOTS must have
+# the same number of entries as sponsored.slots there, or the extra ones simply have nowhere to
+# render. Clicking an empty one lets an owner pay to put one of their own warps there; clicking
+# a filled one teleports to it, same as any other warp.
+#
+# Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA
+# section of purely decorative extra items is supported the same way - see the top of
+# player-warps-list.yml for the full explanation and examples.
+title: "&8Player Warps"
+size: 36
+
+sponsored-slots: [1, 3, 4, 5, 7]
+
+items:
+  sponsored-empty:
+    material: GOLD_NUGGET
+    name: "&6&lSponsored Slot (Empty)"
+    lore:
+      - "&7Pay &f%cost% &7to feature one of"
+      - "&7your warps here for &f%hours%h&7."
+      - ""
+      - "&eClick to choose a warp"
+
+  sponsored-filled:
+    material: GOLD_BLOCK
+    name: "&6&l%name%"
+    lore:
+      - "&7Sponsored by: &f%owner%"
+      - "&7Time left: &f%remaining%"
+      - ""
+      - "&eClick to teleport"
+
+  browse:
+    slot: 10
+    material: MAP
+    name: "&a&lBrowse Warps"
+    lore:
+      - "&7See every player warp."
+      - ""
+      - "&eClick to browse"
+
+  categories:
+    slot: 11
+    material: CHEST
+    name: "&6&lCategories"
+    lore:
+      - "&7Browse warps by category."
+      - ""
+      - "&eClick to open"
+
+  favourites:
+    slot: 12
+    material: NETHER_STAR
+    name: "&d&lFavourites"
+    lore:
+      - "&7Warps you have starred."
+      - ""
+      - "&eClick to open"
+
+  search:
+    slot: 14
+    material: COMPASS
+    name: "&b&lSearch"
+    lore:
+      - "&7Click, then type a name"
+      - "&7or part of a description."
+
+  my-warps:
+    slot: 15
+    material: GRASS_BLOCK
+    name: "&2&lMy Warps"
+    lore:
+      - "&7Manage the warps you own."
+      - ""
+      - "&eClick to open"
+
+  close:
+    slot: 31
+    material: BARRIER
+    name: "&c&lClose"
+    lore: []

@@ -1,0 +1,104 @@
+# Player Warps (/pw)
+#
+# Every player may create their own public warps, up to a permission-based limit, decorate them,
+# monetize them, protect them and hand out management rights on them. This file holds everything
+# about that system that isn't already covered by config.yml's teleport-settings/blacklist/effects
+# "player-warp" sections (delay, cooldown, cost, safety, sounds - those apply here exactly like they
+# do to /warp and /home) or by language.yml (all player-facing text).
+config-version: 1
+
+# How many warps a player may own at once.
+#
+# Overridden per player by the permission node pw.limit.<N> - the highest granted N wins (a player
+# holding both pw.limit.3 and pw.limit.5 gets 5). pw.limit.unlimited removes the cap entirely.
+# This node deliberately lives outside golden.teleports.* - see the plugin.yml comment next to it.
+limits:
+  default: 1
+
+# Automatic removal of warps nobody is looking after. Off by default: every criterion below is
+# independently toggleable, and a warp is only ever purged when at least one enabled criterion
+# matches it - this never runs unless you turn it on.
+purge:
+  enabled: false
+  interval-hours: 24
+
+  # A warp nobody has teleported to in this many days.
+  inactive:
+    enabled: false
+    days: 90
+
+  # The owner has not been seen on the server in this many days.
+  owner-never-seen:
+    enabled: false
+    days: 180
+
+  # The warp's world no longer exists on this server.
+  world-missing:
+    enabled: true
+
+  # The stored warp record is missing required fields and cannot be used.
+  malformed:
+    enabled: true
+
+# One rating per player per warp; re-rating replaces the old score instead of adding another one.
+# This cooldown additionally stops a player flipping their own score back and forth.
+rating:
+  cooldown-hours: 24
+  max-comment-length: 96
+
+password:
+  min-length: 4
+  max-length: 32
+  # Whether solving a warp's password unlocks it for the rest of the play session (until logout)
+  # instead of asking again on every single teleport.
+  remember-per-session: true
+
+whitelist:
+  max-entries: 50
+
+bans:
+  max-entries: 100
+
+description:
+  max-length: 96
+
+# The sponsored slots shown at the top of the /pw main menu. An owner spends `cost` to put one
+# of their own warps in an empty slot for `duration-hours`; it frees itself automatically once
+# that runs out - nothing needs to reclaim it manually. The GUI layout (which inventory slots
+# these render into) lives in menus/player-warps-main.yml under SPONSORED_SLOTS; keep that list
+# the same length as `slots` below, or extra configured slots simply won't have anywhere to show.
+sponsored:
+  enabled: true
+  slots: 5
+  duration-hours: 24
+  cost: 500.0
+
+# Categories a warp may be filed under, browsable from the categories menu. Fully your own -
+# add, rename, re-icon or delete entries freely; a warp whose category disappears just falls back
+# to "no category" rather than breaking. Assign one to a warp with /pw category set <warp> <id>.
+categories:
+  default:
+    display-name: "&7General"
+    icon: "GRASS_BLOCK"
+    slot: 0
+    description: "&7Warps without a specific category."
+  shops:
+    display-name: "&6Shops"
+    icon: "EMERALD"
+    slot: 1
+    description: "&7Player shops and markets."
+  builds:
+    display-name: "&bBuilds"
+    icon: "BRICKS"
+    slot: 2
+    description: "&7Showcase builds and creations."
+  events:
+    display-name: "&dEvents"
+    icon: "FIREWORK_ROCKET"
+    slot: 3
+    description: "&7Event and minigame warps."
+  farms:
+    display-name: "&aFarms"
+    icon: "WHEAT"
+    slot: 4
+    description: "&7Farms and resource generators."

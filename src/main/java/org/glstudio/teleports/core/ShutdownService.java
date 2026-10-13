@@ -65,6 +65,10 @@ public class ShutdownService {
             plugin.getHomeManager().safeDisable();
         }
 
+        if (plugin.getMigrationManager() != null) {
+            plugin.getMigrationManager().safeDisable();
+        }
+
         if (plugin.getTpaManager() != null) {
             plugin.getTpaManager().safeDisable();
         }
@@ -91,6 +95,26 @@ public class ShutdownService {
 
         if (plugin.getEffectManager() != null) {
             plugin.getEffectManager().safeDisable();
+        }
+
+        if (plugin.getPlayerWarpManager() != null) {
+            plugin.getPlayerWarpManager().safeDisable();
+        }
+
+        if (plugin.getPlayerWarpSponsorManager() != null) {
+            plugin.getPlayerWarpSponsorManager().safeDisable();
+        }
+
+        if (plugin.getPlayerWarpPurgeService() != null) {
+            plugin.getPlayerWarpPurgeService().safeDisable();
+        }
+
+        if (plugin.getChatInputManager() != null) {
+            plugin.getChatInputManager().safeDisable();
+        }
+
+        if (plugin.getBackManager() != null) {
+            plugin.getBackManager().safeDisable();
         }
     }
 

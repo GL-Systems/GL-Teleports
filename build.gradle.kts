@@ -32,10 +32,9 @@ dependencies {
     compileOnly(libs.mysql.connector)
     compileOnly(libs.mongodb.driver.sync)
 
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-
-    testImplementation(libs.snakeyaml)
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.11.3")
+    testImplementation(libs.paper.api)
 }
 
 java {
@@ -45,7 +44,6 @@ java {
 tasks {
     test {
         useJUnitPlatform()
-        dependsOn(processResources)
     }
 
     runServer {

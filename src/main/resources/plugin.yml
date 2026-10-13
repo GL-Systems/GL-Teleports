@@ -46,6 +46,25 @@ permissions:
       golden.teleports.tpa.toggle: true
       golden.teleports.tpa.block: true
       golden.teleports.home.share: true
+      golden.teleports.playerwarp.use: true
+      golden.teleports.playerwarp.set: true
+      golden.teleports.playerwarp.remove: true
+      golden.teleports.playerwarp.list: true
+      golden.teleports.playerwarp.desc: true
+      golden.teleports.playerwarp.icon: true
+      golden.teleports.playerwarp.category: true
+      golden.teleports.playerwarp.rate: true
+      golden.teleports.playerwarp.lock: true
+      golden.teleports.playerwarp.cost: true
+      golden.teleports.playerwarp.reset: true
+      golden.teleports.playerwarp.rename: true
+      golden.teleports.playerwarp.setowner: true
+      golden.teleports.playerwarp.password: true
+      golden.teleports.playerwarp.whitelist: true
+      golden.teleports.playerwarp.ban: true
+      golden.teleports.playerwarp.favourite: true
+      golden.teleports.playerwarp.settings: true
+      golden.teleports.back.use: true
 
   golden.teleports.home.use:
     description: Travel to one of your homes.
@@ -93,6 +112,65 @@ permissions:
     description: Let other players use your homes.
     default: true
 
+  golden.teleports.playerwarp.use:
+    description: Travel to a player warp with /pw <warp>.
+    default: true
+  golden.teleports.playerwarp.set:
+    description: Create one of your own player warps, up to your limit.
+    default: true
+  golden.teleports.playerwarp.remove:
+    description: Delete one of your own player warps.
+    default: true
+  golden.teleports.playerwarp.list:
+    description: Open /pw and browse the list of player warps.
+    default: true
+  golden.teleports.playerwarp.desc:
+    description: Set or clear a player warp's description.
+    default: true
+  golden.teleports.playerwarp.icon:
+    description: Set or clear a player warp's icon.
+    default: true
+  golden.teleports.playerwarp.category:
+    description: File a player warp under a category.
+    default: true
+  golden.teleports.playerwarp.rate:
+    description: Rate somebody else's player warp.
+    default: true
+  golden.teleports.playerwarp.lock:
+    description: Lock or unlock one of your own player warps.
+    default: true
+  golden.teleports.playerwarp.cost:
+    description: Set or clear the cost to use one of your own player warps.
+    default: true
+  golden.teleports.playerwarp.reset:
+    description: Move a player warp to where you are standing.
+    default: true
+  golden.teleports.playerwarp.rename:
+    description: Rename one of your own player warps.
+    default: true
+  golden.teleports.playerwarp.setowner:
+    description: Transfer ownership of one of your own player warps.
+    default: true
+  golden.teleports.playerwarp.password:
+    description: Set or clear a password on one of your own player warps.
+    default: true
+  golden.teleports.playerwarp.whitelist:
+    description: Manage the whitelist of one of your own player warps.
+    default: true
+  golden.teleports.playerwarp.ban:
+    description: Manage bans on one of your own player warps.
+    default: true
+  golden.teleports.playerwarp.favourite:
+    description: Favourite a player warp.
+    default: true
+  golden.teleports.playerwarp.settings:
+    description: Open the settings menu of one of your own player warps.
+    default: true
+
+  golden.teleports.back.use:
+    description: Return to where you were right before your last teleport.
+    default: true
+
   golden.teleports.admin.*:
     description: Every staff-facing node.
     default: op
@@ -101,10 +179,30 @@ permissions:
       golden.teleports.admin.backup: true
       golden.teleports.admin.history: true
       golden.teleports.admin.lock: true
+      golden.teleports.admin.migrate: true
       golden.teleports.home.admin: true
       golden.teleports.warp.set: true
       golden.teleports.warp.delete: true
+      golden.teleports.warp.others: true
       golden.teleports.spawn.set: true
+      golden.teleports.spawn.others: true
+      golden.teleports.playerwarp.admin.removeall: true
+      golden.teleports.playerwarp.admin.managers: true
+      golden.teleports.playerwarp.admin.reload: true
+      golden.teleports.playerwarp.admin.view: true
+
+  golden.teleports.playerwarp.admin.removeall:
+    description: Delete every player warp belonging to a given player, and manage/delete any player warp regardless of ownership.
+    default: op
+  golden.teleports.playerwarp.admin.managers:
+    description: Add or remove managers on any player warp.
+    default: op
+  golden.teleports.playerwarp.admin.reload:
+    description: Reload the player-warps.yml configuration and its menus.
+    default: op
+  golden.teleports.playerwarp.admin.view:
+    description: Open the player warps administration menu.
+    default: op
 
   golden.teleports.admin.reload:
     description: Reload the configuration and read the plugin's status.
@@ -118,6 +216,9 @@ permissions:
   golden.teleports.admin.lock:
     description: Close and reopen warps and servers for maintenance.
     default: op
+  golden.teleports.admin.migrate:
+    description: Import homes, warps and player warps from EssentialsX, HuskHomes or PlayerWarps with /glteleports migrate.
+    default: op
   golden.teleports.home.admin:
     description: Read and edit the homes of other players.
     default: op
@@ -127,8 +228,14 @@ permissions:
   golden.teleports.warp.delete:
     description: Delete a warp.
     default: op
+  golden.teleports.warp.others:
+    description: Send another player to a warp.
+    default: op
   golden.teleports.spawn.set:
     description: Move this server's spawn.
+    default: op
+  golden.teleports.spawn.others:
+    description: Send another player to spawn.
     default: op
 
   golden.teleports.bypass.*:
@@ -141,6 +248,36 @@ permissions:
       golden.teleports.bypass.safety: true
       golden.teleports.bypass.blacklist: true
       golden.teleports.bypass.lock: true
+      golden.teleports.playerwarp.bypass.password: true
+      golden.teleports.playerwarp.bypass.whitelist: true
+      golden.teleports.playerwarp.bypass.ban: true
+      golden.teleports.playerwarp.bypass.lock: true
+      golden.teleports.playerwarp.bypass.cost: true
+
+  golden.teleports.playerwarp.bypass.password:
+    description: Teleport into a password-protected player warp without the password.
+    default: op
+  golden.teleports.playerwarp.bypass.whitelist:
+    description: Teleport into a whitelisted player warp without being on the list.
+    default: op
+  golden.teleports.playerwarp.bypass.ban:
+    description: Teleport into a player warp you are banned from.
+    default: op
+  golden.teleports.playerwarp.bypass.lock:
+    description: Teleport into a player warp its owner locked.
+    default: op
+  golden.teleports.playerwarp.bypass.cost:
+    description: Use a player warp without paying its cost.
+    default: op
+
+  # pw.limit.<N>: the highest granted N becomes a player's player-warp limit (see limits.default
+  # in player-warps.yml for the floor when none is granted). Deliberately outside the
+  # golden.teleports.* tree so it reads the same as EssentialsX-style per-rank limit nodes; grant
+  # whichever numbers your rank ladder needs, e.g. pw.limit.3, pw.limit.10 - there is nothing to
+  # declare here since the number is open-ended.
+  pw.limit.unlimited:
+    description: No player-warp limit at all.
+    default: false
 
   golden.teleports.bypass.cooldown:
     description: Teleport without waiting out a cooldown.
@@ -280,7 +417,8 @@ permissions:
       golden.teleports.home.limit.unlimited: true
 
 # Downloaded by the server at load time instead of being shaded into the jar, so a
-# server only pulls the backend it actually configured in database.yml.
+# server only pulls the backend it actually configured in database.yml. The PostgreSQL driver is
+# only used to read a HuskHomes or PlayerWarps database during /glteleports migrate.
 libraries:
   - com.zaxxer:HikariCP:6.0.0
   - org.xerial:sqlite-jdbc:3.45.1.0
@@ -289,3 +427,4 @@ libraries:
   - org.mongodb:mongodb-driver-sync:5.1.0
   - org.mongodb:mongodb-driver-core:5.1.0
   - org.mongodb:bson:5.1.0
+  - org.postgresql:postgresql:42.7.5

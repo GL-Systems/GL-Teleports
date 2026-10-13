@@ -1,12 +1,15 @@
 package org.glstudio.teleports.modules.listener;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.modules.manager.BedRespawnManager;
 import org.glstudio.teleports.modules.model.SpawnLocation;
 
 public class RespawnListener implements Listener {
@@ -29,6 +32,19 @@ public class RespawnListener implements Listener {
             return;
         }
 
+        Player player = event.getPlayer();
+        BedRespawnManager bedRespawn = plugin.getBedRespawnManager();
+
+        if (bedRespawn.isEnabled() && !bedRespawn.isBedRespawnServer()) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (player.isOnline()) {
+                    bedRespawn.sendToStoredOrSpawn(player);
+                }
+            }, 1L);
+
+            return;
+        }
+
         SpawnLocation spawn = plugin.getSpawnManager().getCachedSpawn();
 
         if (spawn == null) {
@@ -41,12 +57,12 @@ public class RespawnListener implements Listener {
         }
 
         if (!plugin.getCrossServerManager().isLocal(spawn.getServer())) {
-            if (!warnedAboutMissingSpawn) {
-                warnedAboutMissingSpawn = true;
-                LoggerUtils.logWarn("spawn.respawn-at-spawn is on but the network spawn lives on '"
-                        + spawn.getServer() + "', and respawning cannot transfer a player between "
-                        + "servers. The world spawn is used here instead.");
-            }
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (player.isOnline()) {
+                    plugin.getSpawnManager().teleportToSpawn(player, true);
+                }
+            }, 1L);
+
             return;
         }
 

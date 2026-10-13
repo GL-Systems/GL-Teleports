@@ -2,8 +2,9 @@ package org.glstudio.teleports.modules.menu;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.glstudio.nexus.utils.ConfigFile;
-import org.glstudio.teleports.common.menu.button.Button;
-import org.glstudio.teleports.common.menu.button.ButtonBuilder;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.nexus.modules.menu.button.Button;
+import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +21,7 @@ public final class MenuItems {
         if (section == null) {
             return;
         }
-        int slot = section.getInt("SLOT", NO_SLOT);
+        int slot = section.getInt("slot", NO_SLOT);
         if (slot < 0) {
             return;
         }
@@ -35,9 +36,32 @@ public final class MenuItems {
         return ButtonBuilder.fromConfig(config.getConfigurationSection(path));
     }
 
+    /**
+     * Purely decorative, non-interactive items an admin adds to fill out a menu's look - glass
+     * panes, borders, server-branding icons, anything under an {@code extra} section of arbitrary
+     * named entries (slot/material/name/lore/custom-model-data/glow/item-flags, same shape as any
+     * other item). Never overrides a functional button already placed in the same slot - call
+     * this last, after every button the menu actually needs to work.
+     */
+    public static void putExtras(Map<Integer, Button> buttons, ConfigFile config, String path) {
+        ConfigurationSection section = config.getConfigurationSection(path);
+        if (section == null) {
+            return;
+        }
+
+        for (String key : section.getKeys(false)) {
+            String itemPath = path + "." + key;
+            int slot = slot(config, itemPath);
+            if (slot < 0) {
+                continue;
+            }
+            buttons.putIfAbsent(slot, builder(config, itemPath).build());
+        }
+    }
+
     public static int slot(ConfigFile config, String path) {
         ConfigurationSection section = config.getConfigurationSection(path);
-        return section == null ? NO_SLOT : section.getInt("SLOT", NO_SLOT);
+        return section == null ? NO_SLOT : section.getInt("slot", NO_SLOT);
     }
 
     public static int slot(ConfigFile config, String path, int fallback) {
@@ -50,13 +74,13 @@ public final class MenuItems {
         if (section == null) {
             return fallback;
         }
-        String name = section.getString("NAME");
+        String name = section.getString("name");
         return name == null ? fallback : name;
     }
 
     public static List<String> lore(ConfigFile config, String path) {
         ConfigurationSection section = config.getConfigurationSection(path);
-        return section == null ? new ArrayList<>() : section.getStringList("LORE");
+        return section == null ? new ArrayList<>() : section.getStringList("lore");
     }
 
     public static List<Integer> intList(ConfigFile config, String path) {
@@ -69,6 +93,10 @@ public final class MenuItems {
 
     public static int integer(ConfigFile config, String path, int fallback) {
         return config.contains(path) ? config.getInt(path, fallback) : fallback;
+    }
+
+    public static String prompt(GTeleports plugin, String languageKey, Object... placeholders) {
+        return apply(plugin.getMessages().raw(languageKey), placeholders);
     }
 
     public static String apply(String line, Object... placeholders) {

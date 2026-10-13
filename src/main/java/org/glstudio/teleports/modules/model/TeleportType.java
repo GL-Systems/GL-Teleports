@@ -6,6 +6,8 @@ import lombok.Getter;
 public enum TeleportType {
     HOME("home"),
     WARP("warp"),
+    PLAYER_WARP("player-warp"),
+    BACK("back"),
     TPA("tpa"),
     TPAHERE("tpahere"),
     SPAWN("spawn");

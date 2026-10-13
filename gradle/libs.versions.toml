@@ -1,6 +1,6 @@
 [versions]
 paper = "1.21.8-R0.1-SNAPSHOT"
-nexus = "v1.0.6"
+nexus = "v1.1.13"
 jedis = "7.2.0"
 vault = "1.7"
 placeholderapi = "2.12.2"
@@ -9,8 +9,6 @@ sqlite = "3.45.1.0"
 h2 = "2.2.224"
 mysql = "8.3.0"
 mongodb = "5.1.0"
-junit = "5.11.3"
-snakeyaml = "2.2"
 
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
@@ -23,6 +21,3 @@ sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 mysql-connector = { module = "com.mysql:mysql-connector-j", version.ref = "mysql" }
 mongodb-driver-sync = { module = "org.mongodb:mongodb-driver-sync", version.ref = "mongodb" }
-junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }

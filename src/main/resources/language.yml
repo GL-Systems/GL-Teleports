@@ -78,7 +78,26 @@ errors:
   warp-on-other-server: "<red>Warp '<yellow>{name}</yellow>' already exists on <yellow>{server}</yellow>. Delete it there first.</red>"
   request-already-sent: "<red>You already have a request waiting for <yellow>{player}</yellow>!</red>"
   too-many-requests: "<red>You already have <yellow>{limit}</yellow> requests waiting.</red>"
-  
+
+  invalid-material: "<red>'<yellow>{material}</yellow>' is not a valid item.</red>"
+  invalid-amount: "<red>'<yellow>{value}</yellow>' is not a valid amount.</red>"
+
+  # Player warps (/pw)
+  player-warp-not-found: "<red>Player warp '<yellow>{name}</yellow>' not found!</red>"
+  player-warp-name-taken: "<red>The name '<yellow>{name}</yellow>' is already used by another player warp.</red>"
+  player-warp-limit-reached: "<red>You have reached your player warp limit! (<yellow>{limit}</yellow>)</red>"
+  player-warp-locked: "<red>'<yellow>{name}</yellow>' is locked by its owner.</red>"
+  player-warp-banned: "<red>You are banned from '<yellow>{name}</yellow>'.</red>"
+  player-warp-not-whitelisted: "<red>'<yellow>{name}</yellow>' is whitelisted and you are not on the list.</red>"
+  player-warp-category-not-found: "<red>Category '<yellow>{category}</yellow>' does not exist.</red>"
+  player-warp-password-length: "<red>The password must be between <yellow>{min}</yellow> and <yellow>{max}</yellow> characters.</red>"
+  player-warp-icon-empty-hand: "<red>Hold an item to use as the icon, or give a material name after the warp.</red>"
+  player-warp-world-blacklisted: "<red>Player warps cannot be created or moved into this world.</red>"
+
+  back-not-set: "<red>You don't have anywhere to go back to.</red>"
+  back-disabled: "<red>/back is turned off on this server.</red>"
+  back-destination-blacklisted: "<red>You cannot go back there.</red>"
+
   # Safety errors
   unsafe-location:
     void: "<red>That location is in the void!</red>"
@@ -111,6 +130,7 @@ warp:
   created: "<green>Warp '<yellow>{name}</yellow>' created successfully!</green>"
   updated: "<green>Warp '<yellow>{name}</yellow>' updated successfully!</green>"
   deleted: "<green>Warp '<yellow>{name}</yellow>' deleted successfully!</green>"
+  sent-other: "<green>Sent <yellow>{player}</yellow> to warp '<yellow>{name}</yellow>'.</green>"
 
   permission-set: "<green>Warp '<yellow>{name}</yellow>' now requires <yellow>{permission}</yellow>.</green>"
 
@@ -126,6 +146,7 @@ warp:
 # Spawn messages
 spawn:
   set: "<green>Spawn set successfully!</green>"
+  sent-other: "<green>Sent <yellow>{player}</yellow> to spawn.</green>"
 
 # TPA messages
 tpa:
@@ -153,6 +174,118 @@ tpa:
   block-list-header: "<gold>Blocked players (<yellow>{count}</yellow>):</gold>"
   block-list-entry: "<gray>- <yellow>{player}</yellow></gray>"
   block-list-empty: "<gray>You have not blocked anybody.</gray>"
+
+# Player warps (/pw)
+player-warp:
+  created: "<green>Player warp '<yellow>{name}</yellow>' created successfully!</green>"
+  deleted: "<green>Player warp '<yellow>{name}</yellow>' deleted successfully!</green>"
+  renamed: "<green>Player warp '<yellow>{old}</yellow>' is now '<yellow>{new}</yellow>'.</green>"
+  reset: "<green>'<yellow>{name}</yellow>' now points here.</green>"
+  transferred: "<green>'<yellow>{name}</yellow>' is now owned by <yellow>{player}</yellow>.</green>"
+
+  removeall:
+    none: "<yellow><yellow>{player}</yellow> does not own any player warps.</yellow>"
+    success: "<green>Removed <yellow>{count}</yellow> player warp(s) belonging to <yellow>{player}</yellow>.</green>"
+
+  desc:
+    set: "<green>Description of '<yellow>{name}</yellow>' updated.</green>"
+    removed: "<green>Description of '<yellow>{name}</yellow>' cleared.</green>"
+
+  icon:
+    set: "<green>Icon of '<yellow>{name}</yellow>' updated.</green>"
+    removed: "<green>Icon of '<yellow>{name}</yellow>' reset to the default.</green>"
+
+  category:
+    set: "<green>'<yellow>{name}</yellow>' filed under <yellow>{category}</yellow>.</green>"
+    removed: "<green>'<yellow>{name}</yellow>' no longer has a category.</green>"
+    list-header: "<gold>Categories (<yellow>{count}</yellow>):</gold>"
+    list-entry: "<gray>- <yellow>{id}</yellow> <dark_gray>{name}</dark_gray></gray>"
+
+  cost:
+    set: "<green>'<yellow>{name}</yellow>' now costs <yellow>{cost}</yellow> to use.</green>"
+    removed: "<green>'<yellow>{name}</yellow>' is free to use again.</green>"
+
+  lock:
+    locked: "<green>'<yellow>{name}</yellow>' is now locked.</green>"
+    unlocked: "<green>'<yellow>{name}</yellow>' is now unlocked.</green>"
+
+  password:
+    set: "<green>A password has been set on '<yellow>{name}</yellow>'.</green>"
+    removed: "<green>The password on '<yellow>{name}</yellow>' has been removed.</green>"
+    required: "<yellow>'<yellow>{name}</yellow>' is password-protected.</yellow>"
+    wrong: "<red>Wrong password for '<yellow>{name}</yellow>'. Try again.</red>"
+    prompt: "<yellow>Type the password in chat, or type <white>cancel</white>.</yellow>"
+
+  whitelist:
+    added: "<green>Added <yellow>{player}</yellow> to the whitelist of '<yellow>{warp}</yellow>'.</green>"
+    removed: "<green>Removed <yellow>{player}</yellow> from the whitelist of '<yellow>{warp}</yellow>'.</green>"
+    not-found: "<red><yellow>{player}</yellow> is not whitelisted on '<yellow>{warp}</yellow>'.</red>"
+    already-added: "<red><yellow>{player}</yellow> is already whitelisted on '<yellow>{warp}</yellow>'.</red>"
+    limit-reached: "<red>The whitelist is full (<yellow>{limit}</yellow>).</red>"
+    enabled: "<green>Whitelist enabled on '<yellow>{name}</yellow>'.</green>"
+    disabled: "<green>Whitelist disabled on '<yellow>{name}</yellow>'.</green>"
+    header: "<gold>Whitelist of <yellow>{warp}</yellow> (<yellow>{count}</yellow>):</gold>"
+    entry: "<gray>- <yellow>{player}</yellow></gray>"
+    empty: "<gray>Nobody is whitelisted.</gray>"
+
+  ban:
+    added: "<green>Banned <yellow>{player}</yellow> from '<yellow>{warp}</yellow>': <gray>{reason}</gray></green>"
+    added-temporary: "<green>Banned <yellow>{player}</yellow> from '<yellow>{warp}</yellow>' temporarily: <gray>{reason}</gray></green>"
+    removed: "<green>Unbanned <yellow>{player}</yellow> from '<yellow>{warp}</yellow>'.</green>"
+    not-found: "<red><yellow>{player}</yellow> is not banned from '<yellow>{warp}</yellow>'.</red>"
+    is-owner: "<red>You cannot ban <yellow>{player}</yellow>, they own this warp.</red>"
+    limit-reached: "<red>The ban list is full (<yellow>{limit}</yellow>).</red>"
+    notify: "<red>You have been banned from '<yellow>{warp}</yellow>': <gray>{reason}</gray></red>"
+    header: "<gold>Bans on <yellow>{warp}</yellow> (<yellow>{count}</yellow>):</gold>"
+    entry: "<gray>- <yellow>{player}</yellow> <dark_gray>({reason}, expires: {expires})</dark_gray></gray>"
+    empty: "<gray>Nobody is banned.</gray>"
+
+  managers:
+    added: "<green>Added <yellow>{player}</yellow> as a manager of '<yellow>{warp}</yellow>'.</green>"
+    removed: "<green>Removed <yellow>{player}</yellow> as a manager of '<yellow>{warp}</yellow>'.</green>"
+    not-found: "<red><yellow>{player}</yellow> is not a manager of '<yellow>{warp}</yellow>'.</red>"
+    already-added: "<red><yellow>{player}</yellow> is already a manager of '<yellow>{warp}</yellow>'.</red>"
+    is-owner: "<red><yellow>{player}</yellow> already owns this warp.</red>"
+    header: "<gold>Managers of <yellow>{warp}</yellow> (<yellow>{count}</yellow>):</gold>"
+    entry: "<gray>- <yellow>{player}</yellow></gray>"
+    empty: "<gray>No managers.</gray>"
+
+  favourite:
+    added: "<green>'<yellow>{warp}</yellow>' added to your favourites.</green>"
+    removed: "<green>'<yellow>{warp}</yellow>' removed from your favourites.</green>"
+
+  rate:
+    success: "<green>You rated '<yellow>{warp}</yellow>' <yellow>{stars}</yellow>/5.</green>"
+    own-warp: "<red>You cannot rate your own warp.</red>"
+    cooldown: "<red>You can change your rating again in <yellow>{time}</yellow>h.</red>"
+
+  input:
+    prompt: "<yellow>{prompt}</yellow>"
+    cancelled: "<yellow>Cancelled.</yellow>"
+
+  prompts:
+    description: "New description for '{name}' (type 'cancel' to keep it)"
+    icon: "New icon material for '{name}', e.g. DIAMOND_BLOCK"
+    cost: "New cost for '{name}'"
+    password: "New password for '{name}'"
+    rename: "New name for '{name}'"
+    whitelist-add: "Player to whitelist on '{name}'"
+    ban-add: "Player to ban from '{name}'"
+    ban-reason: "Reason for banning {player} (or 'skip')"
+    managers-add: "Player to add as a manager of '{name}'"
+    search: "Search term for player warps"
+    rating-comment: "Type a short comment for your {stars}-star rating, or 'skip'"
+
+  list:
+    header: "<gold>Player warps (<yellow>{count}</yellow>) — page <yellow>{page}</yellow>/<yellow>{pages}</yellow>:</gold>"
+    entry: "<gray>- <yellow>{name}</yellow> <dark_gray>by</dark_gray> <white>{owner}</white> <dark_gray>({world})</dark_gray></gray>"
+
+  sponsor:
+    success: "<green>'<yellow>{warp}</yellow>' is now sponsored for <yellow>{hours}</yellow>h. Charged <yellow>{cost}</yellow>.</green>"
+    disabled: "<red>Sponsored slots are turned off on this server.</red>"
+    invalid-slot: "<red>That is not a valid sponsored slot.</red>"
+    slot-taken: "<red>That sponsored slot is already taken.</red>"
+    already-sponsored: "<red>'<yellow>{warp}</yellow>' is already sponsored in another slot.</red>"
 
 # /glteleports reload
 reload:
@@ -237,11 +370,60 @@ backup:
   finished: "<green>Backup written to <yellow>{file}</yellow>.</green>"
   failed: "<red>The backup could not be written. Check the console.</red>"
 
+# /glteleports migrate <source> [types] [confirm]
+migrate:
+  usage: '<gray>/glteleports migrate \<{sources}> [types] [confirm] (types: homes, warps, playerwarps; separate multiple with commas)</gray>'
+  scanning: "<yellow>Reading <gold>{source}</gold> data. Nothing will be written yet...</yellow>"
+  importing: "<yellow>Importing <gold>{source}</gold> data...</yellow>"
+  scan-header: "<gold>{source} migration scan</gold> <gray>({storage}, {duration})</gray>"
+  done-header: "<green>Migration from <gold>{source}</gold> completed in <yellow>{duration}</yellow>.</green>"
+  selection: "<gray>Selected data: <white>{selection}</white>.</gray>"
+  world-mappings: "<gray>World changes for this import: <white>{mappings}</white>.</gray>"
+  summary-players: "<gray>Players with homes: <white>{players}</white></gray>"
+  summary-homes: "<gray>Homes: <white>{found}</white> found, <green>{imported}</green> to import (<white>{new}</white> new, <white>{renamed}</white> renamed, <white>{replaced}</white> replacing), <white>{unchanged}</white> already here, <yellow>{conflicts}</yellow> conflicts, <white>{elsewhere}</white> on other servers, <red>{invalid}</red> invalid</gray>"
+  summary-warps: "<gray>Warps: <white>{found}</white> found, <green>{imported}</green> to import (<white>{new}</white> new, <white>{renamed}</white> renamed, <white>{replaced}</white> replacing), <white>{unchanged}</white> already here, <yellow>{conflicts}</yellow> conflicts, <white>{elsewhere}</white> on other servers, <red>{invalid}</red> invalid</gray>"
+  done-homes: "<gray>Homes imported: <green>{imported}</green> (<white>{renamed}</white> renamed, <white>{replaced}</white> replaced) · skipped: <yellow>{skipped}</yellow> · failed: <red>{invalid}</red></gray>"
+  done-warps: "<gray>Warps imported: <green>{imported}</green> (<white>{renamed}</white> renamed, <white>{replaced}</white> replaced) · skipped: <yellow>{skipped}</yellow> · failed: <red>{invalid}</red></gray>"
+  summary-player-warp-owners: "<gray>Players with player warps: <white>{players}</white></gray>"
+  summary-player-warps: "<gray>Player warps: <white>{found}</white> found, <green>{imported}</green> to import (<white>{new}</white> new, <white>{renamed}</white> renamed), <white>{unchanged}</white> already here, <yellow>{conflicts}</yellow> conflicts, <white>{elsewhere}</white> on other servers, <red>{invalid}</red> invalid</gray>"
+  done-player-warps: "<gray>Player warps imported: <green>{imported}</green> (<white>{renamed}</white> renamed) · skipped: <yellow>{skipped}</yellow> · failed: <red>{invalid}</red></gray>"
+  summary-player-warp-links: "<gray>With them, to import: favourites <white>{favourites}</white>/{favourites-found}, ratings <white>{ratings}</white>/{ratings-found}, whitelisted <white>{whitelist}</white>/{whitelist-found}, managers <white>{managers}</white>/{managers-found}, bans <white>{bans}</white>/{bans-found}</gray>"
+  done-player-warp-links: "<gray>With them, imported: favourites <green>{favourites}</green>/{favourites-found}, ratings <green>{ratings}</green>/{ratings-found}, whitelisted <green>{whitelist}</green>/{whitelist-found}, managers <green>{managers}</green>/{managers-found}, bans <green>{bans}</green>/{bans-found}</gray>"
+  summary-player-warp-links-left: "<gray>Not imported: <white>{with-warp}</white> belong to warps that are not imported, <white>{duplicates}</white> duplicates merged, <red>{invalid}</red> invalid (ratings outside 1-5, bans already over).</gray>"
+  summary-unknown-categories: "<yellow>Categories not defined in player-warps.yml: <white>{categories}</white>. The warps keep them; add them to player-warps.yml to show them in the menu.</yellow>"
+  summary-adjusted: "<gray><white>{count}</white> entries are imported with a change (name, icon, shortened text...); see the log.</gray>"
+  not-carried-over-header: "<yellow>Kept in the source only, no equivalent here:</yellow>"
+  not-carried-over-entry: "<gray> - {what}: <white>{amount}</white></gray>"
+  summary-unreadable: "<red>{count}</red> <gray>records could not be read at all (corrupt files, missing positions).</gray>"
+  summary-public: "<gray><white>{count}</white> public homes will become ordinary homes; use /homeinvite to share them again.</gray>"
+  summary-restricted: "<gray><white>{count}</white> warps keep the permission the source required to use them.</gray>"
+  summary-unloaded-worlds: "<yellow>{count} entries point at worlds that are not loaded on this server; they are imported, but cannot be used until those worlds exist.</yellow>"
+  target-local: "<gray>Multi-server is off: everything is assigned to this server (<white>{server}</white>).</gray>"
+  target-source: "<gray>Entries keep the server the source recorded; the rest are assigned to <white>{server}</white>.</gray>"
+  target-server: "<gray>Everything is assigned to server <white>{server}</white>.</gray>"
+  log-written: "<gray>Details: <white>{file}</white></gray>"
+  nothing-to-import: "<green>Nothing to import from {source}: everything is either already here or unusable.</green>"
+  confirm: "<yellow>Nothing has been written. Conflicts will be handled as <gold>{policy}</gold>. Back up your data, then run <gold>{command}</gold> within {seconds}s to import.</yellow>"
+  errors:
+    unknown-source: "<red><yellow>{source}</yellow> is not a plugin that can be migrated. Available: <yellow>{sources}</yellow>.</red>"
+    invalid-policy: "<red>migrate.conflict-policy is <yellow>{policy}</yellow> in config.yml; use skip, rename or replace.</red>"
+    invalid-selection: "<red>Unknown migration data type <yellow>{selection}</yellow>; use homes, warps, playerwarps or all.</red>"
+    invalid-world-mapping: "<red>Invalid migrate.world-mappings in config.yml: <yellow>{error}</yellow>. Nothing was written.</red>"
+    already-running: "<red>A migration is already running. Wait for it to finish.</red>"
+    scan-first: "<red>Scan again and confirm within two minutes using the same source and data types. The conflict policy and world mappings must also stay the same.</red>"
+    not-found: "<red>No {source} data was found in <yellow>{path}</yellow>. Is the plugin's folder there? Set migrate.folders in config.yml to read it from elsewhere.</red>"
+    server-required: "<red>Multi-server is on and {source} does not record which server its data belongs to. Set <yellow>migrate.server</yellow> in config.yml to that server's name, then try again. Nothing was written.</red>"
+    unsupported-database: "<red>{source} is configured with database type <yellow>{type}</yellow>, which cannot be read.</red>"
+    driver-missing: "<red>The database driver <yellow>{driver}</yellow> is not available, so {source} data cannot be read. Restart the server so it can download it.</red>"
+    connect-failed: "<red>Could not connect to the {source} database: <yellow>{error}</yellow>. Nothing was written.</red>"
+    read-failed: "<red>{source} data could not be read: <yellow>{error}</yellow>. Nothing was written.</red>"
+    write-failed: "<red>The import failed while writing: <yellow>{error}</yellow>. Check the console; on mysql, sqlite and h2 nothing was written.</red>"
+
 # Command usage lines, shown when a command is used incorrectly.
 # Single-quoted so the backslashes survive YAML: \< escapes the angle bracket for MiniMessage,
 # which would otherwise try to read <name> as a tag.
 usage:
-  glteleports: '<gray>/glteleports \<reload|backup|status|debug|history|lock|unlock|locks|version></gray>'
+  glteleports: '<gray>/glteleports \<reload|backup|status|debug|history|lock|unlock|locks|migrate|version></gray>'
   sethome: '<gray>/sethome [name]  |  /sethome \<player>:\<home> (staff)</gray>'
   home: '<gray>/home \<name></gray>'
   renamehome: '<gray>/renamehome \<old> \<new></gray>'
@@ -249,12 +431,12 @@ usage:
   delhome: '<gray>/delhome \<name>  |  /delhome \<player>:\<home> (staff)</gray>'
   listhomes: '<gray>/listhomes [player]</gray>'
   setwarp: '<gray>/setwarp \<name> [permission]</gray>'
-  warp: '<gray>/warp \<name></gray>'
+  warp: '<gray>/warp \<name> [player] (staff)</gray>'
   warps: '<gray>/warps [page]</gray>'
   editwarp: '<gray>/editwarp \<name> \<permission|cost|cooldown|delay> [value|default]</gray>'
   delwarp: '<gray>/delwarp \<name></gray>'
   setspawn: '<gray>/setspawn</gray>'
-  spawn: '<gray>/spawn</gray>'
+  spawn: '<gray>/spawn [player] (staff)</gray>'
   tpa: '<gray>/tpa \<player></gray>'
   tpahere: '<gray>/tpahere \<player></gray>'
   tpaccept: '<gray>/tpaccept [player]</gray>'
@@ -266,3 +448,5 @@ usage:
   homeinvite: '<gray>/homeinvite \<player> \<home> [duration]</gray>'
   homeuninvite: '<gray>/homeuninvite \<player> \<home></gray>'
   homeinvites: '<gray>/homeinvites [received|given]</gray>'
+  pw: '<gray>/pw \<warp>  |  /pw set \<name> [player]  |  /pw remove \<warp>  |  /pw list [page] [player]  |  /pw settings \<warp>  |  see the wiki for the full subcommand list</gray>'
+  back: '<gray>/back</gray>'

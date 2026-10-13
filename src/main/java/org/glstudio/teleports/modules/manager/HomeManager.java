@@ -13,6 +13,7 @@ import org.glstudio.teleports.modules.model.TeleportType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -472,13 +473,19 @@ public class HomeManager {
 
         int limit = plugin.getSettings().getInt("home-limits.default", 3);
 
-        for (String tier : new String[]{"vip", "staff", "owner"}) {
+        ConfigurationSection permissions = plugin.getConfigManager().getMainConfig()
+                .getConfigurationSection("home-limits.permissions");
+
+        if (permissions == null) {
+            return limit;
+        }
+
+        for (String tier : permissions.getKeys(false)) {
             if (!player.hasPermission(LIMIT_PERMISSION + tier)) {
                 continue;
             }
 
-            int tierLimit = plugin.getSettings()
-                    .getInt("home-limits.permissions." + tier, limit);
+            int tierLimit = permissions.getInt(tier, limit);
 
             if (tierLimit == UNLIMITED) {
                 return UNLIMITED;

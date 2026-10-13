@@ -19,6 +19,7 @@ import org.glstudio.teleports.modules.model.DestinationLock;
 import org.glstudio.teleports.modules.model.TeleportRecord;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.glstudio.teleports.modules.manager.CrossServerManager;
+import org.glstudio.teleports.modules.migration.MigrationSelection;
 
 import java.io.File;
 import java.io.IOException;
@@ -63,6 +64,7 @@ public class GLTeleportsCommand extends Command {
             case "lock" -> ifPermitted(sender, Permissions.ADMIN_LOCK, () -> lock(sender, args));
             case "unlock" -> ifPermitted(sender, Permissions.ADMIN_LOCK, () -> unlock(sender, args));
             case "locks" -> ifPermitted(sender, Permissions.ADMIN_LOCK, () -> locks(sender));
+            case "migrate" -> ifPermitted(sender, Permissions.ADMIN_MIGRATE, () -> migrate(sender, args));
             case "version" -> plugin.getMessages().send(sender, "status.version",
                     "{version}", plugin.getPluginMeta().getVersion());
             default -> sendUsage(sender);
@@ -200,6 +202,34 @@ public class GLTeleportsCommand extends Command {
         }
     }
 
+    private void migrate(CommandSender sender, String[] args) {
+        if (args.length < 2 || args.length > 4) {
+            plugin.getMessages().send(sender, "migrate.usage",
+                    "{sources}", String.join(", ", plugin.getMigrationManager().sourceIds()));
+            return;
+        }
+
+        boolean confirm = args[args.length - 1].equalsIgnoreCase("confirm");
+        if (args.length == 4 && !confirm) {
+            plugin.getMessages().send(sender, "migrate.usage",
+                    "{sources}", String.join(", ", plugin.getMigrationManager().sourceIds()));
+            return;
+        }
+
+        String selector = args.length == 2 || (args.length == 3 && confirm) ? "all" : args[2];
+        MigrationSelection selection = MigrationSelection.parse(selector);
+        if (selection == null) {
+            plugin.getMessages().send(sender, "migrate.errors.invalid-selection", "{selection}", selector);
+            return;
+        }
+
+        if (confirm) {
+            plugin.getMigrationManager().confirm(sender, args[1], selection);
+        } else {
+            plugin.getMigrationManager().scan(sender, args[1], selection);
+        }
+    }
+
     private void ifPermitted(CommandSender sender, String permission, Runnable action) {
         if (!sender.hasPermission(permission)) {
             plugin.getMessages().send(sender, "errors.no-permission");
@@ -300,6 +330,9 @@ public class GLTeleportsCommand extends Command {
         plugin.getWarpManager().invalidateCache();
         plugin.getSpawnManager().invalidateCache();
         plugin.getHomeManager().invalidate(null);
+        plugin.getPlayerWarpManager().invalidateCache();
+        plugin.getPlayerWarpSponsorManager().invalidateCache();
+        plugin.getPlayerWarpCategoryRegistry().load();
 
         plugin.getMessages().send(sender, "reload.success");
         LoggerUtils.logInfo(sender.getName() + " reloaded the configuration.");
@@ -350,12 +383,25 @@ public class GLTeleportsCommand extends Command {
             return filterTabCompletion(registry == null ? List.of() : List.copyOf(registry.knownServers()), args[2]);
         }
 
+        if (args.length == 2 && args[0].equalsIgnoreCase("migrate")) {
+            return filterTabCompletion(plugin.getMigrationManager().sourceIds(), args[1]);
+        }
+
+        if (args.length == 3 && args[0].equalsIgnoreCase("migrate")) {
+            return filterTabCompletion(List.of("all", "homes", "warps", "playerwarps", "confirm"), args[2]);
+        }
+
+        if (args.length == 4 && args[0].equalsIgnoreCase("migrate")) {
+            return filterTabCompletion(List.of("confirm"), args[3]);
+        }
+
         if (args.length != 1) {
             return List.of();
         }
 
         return filterTabCompletion(
-                List.of("reload", "backup", "status", "debug", "history", "lock", "unlock", "locks", "version"),
+                List.of("reload", "backup", "status", "debug", "history", "lock", "unlock", "locks", "migrate",
+                        "version"),
                 args[0]);
     }
 }

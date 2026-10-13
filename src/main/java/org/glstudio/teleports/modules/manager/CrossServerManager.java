@@ -94,6 +94,10 @@ public class CrossServerManager {
     }
 
     public void sendTo(Player player, TeleportType type, TeleportDestination destination) {
+        sendTo(player, type, destination, false);
+    }
+
+    public void sendTo(Player player, TeleportType type, TeleportDestination destination, boolean instant) {
         String targetServer = destination.getServer();
 
         if (!isEnabled()) {
@@ -121,7 +125,7 @@ public class CrossServerManager {
         String playerName = player.getName();
         String destinationName = describe(destination);
 
-        plugin.getTeleportManager().requestRemoteTeleport(player, type, destination, destinationName, () -> {
+        plugin.getTeleportManager().requestRemoteTeleport(player, type, destination, destinationName, instant, () -> {
             CrossServerTransferEvent event =
                     new CrossServerTransferEvent(player, type, targetServer, destinationName);
 
@@ -163,6 +167,7 @@ public class CrossServerManager {
                 plugin.getHistoryManager().recordCrossServer(player, type, destinationName,
                         player.getLocation(), targetServer, destination.getWorld(),
                         destination.getX(), destination.getY(), destination.getZ(), 0.0D);
+                plugin.getBackManager().recordBackPoint(player, player.getLocation(), settings.getServerName());
 
                 verifyTransfer(uuid, type);
             }));
@@ -245,6 +250,16 @@ public class CrossServerManager {
             case WARP -> {
                 if (plugin.getWarpManager() != null) {
                     plugin.getWarpManager().invalidateCache();
+                }
+            }
+            case PLAYER_WARP -> {
+                if (plugin.getPlayerWarpManager() != null) {
+                    plugin.getPlayerWarpManager().invalidateCache();
+                }
+            }
+            case SPONSORED_SLOT -> {
+                if (plugin.getPlayerWarpSponsorManager() != null) {
+                    plugin.getPlayerWarpSponsorManager().invalidateCache();
                 }
             }
             case SPAWN -> {

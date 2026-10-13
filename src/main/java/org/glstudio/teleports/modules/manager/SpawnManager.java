@@ -82,6 +82,10 @@ public class SpawnManager {
     }
 
     public void teleportToSpawn(Player player) {
+        teleportToSpawn(player, false);
+    }
+
+    public void teleportToSpawn(Player player, boolean instant) {
         Failures.log(getSpawn().thenAccept(spawn -> {
             if (spawn == null) {
                 plugin.getMessages().send(player, "errors.spawn-not-set");
@@ -94,7 +98,7 @@ public class SpawnManager {
                 }
 
                 if (!plugin.getCrossServerManager().isLocal(spawn.getServer())) {
-                    plugin.getCrossServerManager().sendTo(player, TeleportType.SPAWN, spawn);
+                    plugin.getCrossServerManager().sendTo(player, TeleportType.SPAWN, spawn, instant);
                     return;
                 }
 
@@ -105,7 +109,7 @@ public class SpawnManager {
                 }
 
                 plugin.getTeleportManager().requestTeleport(player, location, TeleportType.SPAWN,
-                        null, plugin.getCrossServerManager().currentServer(), success -> {
+                        null, plugin.getCrossServerManager().currentServer(), instant, success -> {
                         });
             });
         }), "SpawnManager#teleportToSpawn");

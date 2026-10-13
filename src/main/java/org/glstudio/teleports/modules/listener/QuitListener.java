@@ -32,6 +32,8 @@ public class QuitListener implements Listener {
         plugin.getHomeManager().refreshShareLabels(player.getUniqueId());
 
         plugin.getCooldownManager().loadNetworkCooldowns(player.getUniqueId());
+
+        plugin.getBackManager().load(player.getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -48,6 +50,9 @@ public class QuitListener implements Listener {
         plugin.getConfirmations().forget(player.getUniqueId());
         plugin.getTpaBlockManager().forget(player.getUniqueId());
         plugin.getTeleportQueue().forget(player.getUniqueId());
+        plugin.getPlayerWarpManager().forgetPasswordUnlocks(player.getUniqueId());
+        plugin.getChatInputManager().cancel(player.getUniqueId());
+        plugin.getBackManager().forget(player.getUniqueId());
 
         if (plugin.getSettings().getBoolean("clear-cooldowns-on-quit", false)) {
             plugin.getCooldownManager().forget(player.getUniqueId());

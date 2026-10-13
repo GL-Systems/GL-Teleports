@@ -1,0 +1,79 @@
+# A single player warp's preview screen - reached by right-clicking it in any list.
+#
+# Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA
+# section of purely decorative extra items is supported the same way - see the top of
+# player-warps-list.yml for the full explanation and examples.
+title: "&8%name%"
+size: 27
+
+items:
+  display:
+    slot: 13
+    material: GRASS_BLOCK
+    name: "&a&l%name%"
+    lore:
+      - "&7Owner: &f%owner%"
+      - "&7World: &f%world%"
+      - "&7Category: &f%category%"
+      - "&7Rating: &f%rating% &7(%rating-count% ratings)"
+      - "&7Favourited by: &f%favourites%"
+      - ""
+      - "&7%description%"
+      - ""
+      - "&7Cost: &f%cost%"
+      - "%status%"
+
+  teleport:
+    slot: 11
+    material: ENDER_PEARL
+    name: "&a&lTeleport"
+    lore:
+      - "&eClick to travel here"
+
+  favourite-on:
+    slot: 15
+    material: NETHER_STAR
+    name: "&d&lFavourited"
+    lore:
+      - "&7Click to remove from favourites"
+
+  favourite-off:
+    slot: 15
+    material: GRAY_DYE
+    name: "&7Favourite"
+    lore:
+      - "&7Click to add to favourites"
+
+  rate:
+    slot: 20
+    material: PAPER
+    name: "&e&lRate this warp"
+    lore:
+      - "&eClick to rate"
+
+  manage:
+    slot: 24
+    material: ANVIL
+    name: "&6&lManage"
+    lore:
+      - "&7You can manage this warp."
+      - "&eClick to open"
+
+  confirm-purchase:
+    title: "&8Teleport for %cost%?"
+    accept: "&a&lTELEPORT"
+    accept-lore:
+      - "&7You will be charged &f%cost%&7."
+    cancel: "&c&lCANCEL"
+
+  back:
+    slot: 0
+    material: SPECTRAL_ARROW
+    name: "&7« Back"
+    lore: []
+
+  close:
+    slot: 8
+    material: BARRIER
+    name: "&c&lClose"
+    lore: []

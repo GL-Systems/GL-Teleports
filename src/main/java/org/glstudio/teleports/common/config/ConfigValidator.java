@@ -29,6 +29,7 @@ public class ConfigValidator {
         checkHistory();
         checkQueue();
         checkScopedHomeLimits();
+        checkMigrate();
 
         for (String problem : problems) {
             LoggerUtils.logWarn("config.yml: " + problem);
@@ -205,6 +206,14 @@ public class ConfigValidator {
         }
     }
 
+    private void checkMigrate() {
+        String policy = plugin.getSettings().getString("migrate.conflict-policy", "skip");
+        if (!List.of("skip", "rename", "replace").contains(policy.toLowerCase(Locale.ROOT))) {
+            problems.add("migrate.conflict-policy is '" + policy + "'; expected skip, rename or replace. "
+                    + "/glteleports migrate refuses to run until it is fixed.");
+        }
+    }
+
     private void atLeast(String path, int minimum) {
         if (!plugin.getSettings().isSet(path)) {
             return;
@@ -225,7 +234,7 @@ public class ConfigValidator {
         List<String> known = List.of("config-version", "multi-server", "MULTI_SERVER", "home-limits",
                 "teleport-settings", "blacklist", "safety", "effects", "backups", "last-location",
                 "menus", "history", "home-shares", "tpa-blocks", "cooldowns", "queue", "performance",
-                "spawn", "clear-cooldowns-on-quit");
+                "spawn", "back", "migrate", "clear-cooldowns-on-quit");
 
         for (String key : root.getKeys(false)) {
             if (!known.contains(key)) {

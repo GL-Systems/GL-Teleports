@@ -1,0 +1,49 @@
+# A warp's ban list, reached from its manage screen.
+#
+# Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA
+# section of purely decorative extra items is supported the same way - see the top of
+# player-warps-list.yml for the full explanation and examples.
+title: "&8Bans: %name%"
+size: 54
+content-slots: [0,1,2,3,4,5,6,7,8, 9,10,11,12,13,14,15,16,17, 18,19,20,21,22,23,24,25,26, 27,28,29,30,31,32,33,34,35]
+
+items:
+  entry:
+    material: PLAYER_HEAD
+    name: "&c%player%"
+    lore:
+      - "&7Reason: &f%reason%"
+      - "&7Expires: &f%expires%"
+      - ""
+      - "&eClick to unban"
+
+  empty:
+    slot: 22
+    material: BARRIER
+    name: "&7Nobody is banned"
+    lore: []
+
+  add:
+    slot: 45
+    material: IRON_BARS
+    name: "&c&lBan Player"
+    lore:
+      - "&eClick to ban someone"
+
+  info:
+    slot: 49
+    material: BOOK
+    name: "&eBans"
+    lore: ["&7Entries: &f%count%"]
+
+  back:
+    slot: 48
+    material: SPECTRAL_ARROW
+    name: "&7« Back"
+    lore: []
+
+  close:
+    slot: 53
+    material: BARRIER
+    name: "&c&lClose"
+    lore: []

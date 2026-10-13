@@ -139,6 +139,19 @@ public class H2Provider extends SqlProvider {
                             ")"
             );
 
+            conn.createStatement().execute(
+                    "CREATE TABLE IF NOT EXISTS bed_respawn_points (" +
+                            "uuid VARCHAR(36) PRIMARY KEY, " +
+                            "world VARCHAR(64) NOT NULL, " +
+                            "x DOUBLE NOT NULL, " +
+                            "y DOUBLE NOT NULL, " +
+                            "z DOUBLE NOT NULL, " +
+                            "yaw FLOAT NOT NULL, " +
+                            "pitch FLOAT NOT NULL, " +
+                            "updated_at BIGINT NOT NULL" +
+                            ")"
+            );
+
             createFeatureTables(conn);
 
             String server = currentServer();
@@ -536,6 +549,64 @@ public class H2Provider extends SqlProvider {
             }
 
             return null;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> saveBedRespawnPoint(UUID uuid, StoredLocation location) {
+        return run(() -> {
+            String query = "MERGE INTO bed_respawn_points (uuid, world, x, y, z, yaw, pitch, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                stmt.setString(2, location.world());
+                stmt.setDouble(3, location.x());
+                stmt.setDouble(4, location.y());
+                stmt.setDouble(5, location.z());
+                stmt.setFloat(6, location.yaw());
+                stmt.setFloat(7, location.pitch());
+                stmt.setLong(8, System.currentTimeMillis());
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to save bed respawn point", e);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<StoredLocation> getBedRespawnPoint(UUID uuid) {
+        return supply(() -> {
+            String query = "SELECT * FROM bed_respawn_points WHERE uuid = ?";
+
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, uuid.toString());
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    return new StoredLocation(rs.getString("world"), rs.getDouble("x"),
+                            rs.getDouble("y"), rs.getDouble("z"), rs.getFloat("yaw"), rs.getFloat("pitch"));
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to read bed respawn point", e);
+            }
+
+            return null;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> clearBedRespawnPoint(UUID uuid) {
+        return run(() -> {
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(
+                         "DELETE FROM bed_respawn_points WHERE uuid = ?")) {
+                stmt.setString(1, uuid.toString());
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException("Failed to clear bed respawn point", e);
+            }
         });
     }
 }

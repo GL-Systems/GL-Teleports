@@ -1,0 +1,142 @@
+# The owner/manager hub for a single warp - also what /pw settings <warp> opens directly.
+#
+# Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA
+# section of purely decorative extra items is supported the same way - see the top of
+# player-warps-list.yml for the full explanation and examples.
+title: "&8Manage: %name%"
+size: 45
+
+items:
+  description:
+    slot: 10
+    material: WRITABLE_BOOK
+    name: "&e&lDescription"
+    lore:
+      - "&7Current: &f%description%"
+      - ""
+      - "&eClick to edit"
+
+  icon:
+    slot: 11
+    material: ITEM_FRAME
+    name: "&e&lIcon"
+    lore:
+      - "&7Current: &f%icon%"
+      - ""
+      - "&eClick to change"
+
+  category:
+    slot: 12
+    material: CHEST
+    name: "&6&lCategory"
+    lore:
+      - "&7Current: &f%category%"
+      - ""
+      - "&eClick to change"
+
+  cost:
+    slot: 13
+    material: GOLD_INGOT
+    name: "&6&lCost"
+    lore:
+      - "&7Current: &f%cost%"
+      - ""
+      - "&eClick to change"
+      - "&7Right click to remove"
+
+  lock:
+    slot: 14
+    material: TRIPWIRE_HOOK
+    name: "&c&lLock"
+    lore:
+      - "&7Status: &f%lock-status%"
+      - ""
+      - "&eClick to toggle"
+
+  password:
+    slot: 15
+    material: TRIPWIRE_HOOK
+    name: "&6&lPassword"
+    lore:
+      - "&7Status: &f%password-status%"
+      - ""
+      - "&eClick to set"
+      - "&7Right click to remove"
+
+  whitelist:
+    slot: 19
+    material: PAPER
+    name: "&e&lWhitelist"
+    lore:
+      - "&7Status: &f%whitelist-status%"
+      - ""
+      - "&eClick to manage"
+
+  bans:
+    slot: 20
+    material: IRON_BARS
+    name: "&c&lBans"
+    lore:
+      - "&eClick to manage"
+
+  managers:
+    slot: 21
+    material: IRON_CHESTPLATE
+    name: "&b&lManagers"
+    lore:
+      - "&7Staff-only."
+      - "&eClick to manage"
+
+  transfer:
+    slot: 22
+    material: NAME_TAG
+    name: "&d&lTransfer Ownership"
+    lore:
+      - "&eClick to transfer"
+
+  rename:
+    slot: 23
+    material: OAK_SIGN
+    name: "&e&lRename"
+    lore:
+      - "&eClick to rename"
+
+  reset:
+    slot: 24
+    material: COMPASS
+    name: "&a&lMove Here"
+    lore:
+      - "&7Moves this warp to your current location."
+      - "&eClick to confirm"
+
+  delete:
+    slot: 25
+    material: BARRIER
+    name: "&c&lDelete Warp"
+    lore:
+      - "&eClick to delete"
+
+  confirm-delete:
+    title: "&8Delete '%name%'?"
+    accept: "&c&lDELETE"
+    accept-lore:
+      - "&7This cannot be undone."
+    cancel: "&a&lKEEP IT"
+
+  confirm-reset:
+    title: "&8Move '%name%' here?"
+    accept: "&a&lMOVE"
+    accept-lore: []
+    cancel: "&c&lCANCEL"
+
+  back:
+    slot: 36
+    material: SPECTRAL_ARROW
+    name: "&7« Back"
+    lore: []
+
+  close:
+    slot: 44
+    material: BARRIER
+    name: "&c&lClose"
+    lore: []

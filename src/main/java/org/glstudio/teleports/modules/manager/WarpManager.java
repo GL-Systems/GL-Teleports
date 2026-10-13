@@ -289,6 +289,10 @@ public class WarpManager {
     }
 
     public void teleportToWarp(Player player, String name) {
+        teleportToWarp(player, name, false);
+    }
+
+    public void teleportToWarp(Player player, String name, boolean bypassWarpPermission) {
         Failures.log(getWarp(name).thenAccept(warp -> {
             if (warp == null) {
                 plugin.getMessages().send(player, "errors.warp-not-found", "{name}", name);
@@ -300,7 +304,8 @@ public class WarpManager {
                     return;
                 }
 
-                if (warp.hasPermission() && !player.hasPermission(warp.getPermission())) {
+                if (!bypassWarpPermission && warp.hasPermission()
+                        && !player.hasPermission(warp.getPermission())) {
                     plugin.getMessages().send(player, "errors.warp-not-found", "{name}", name);
                     return;
                 }
