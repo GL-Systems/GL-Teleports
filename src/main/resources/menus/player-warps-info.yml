@@ -59,13 +59,6 @@ items:
       - "&7You can manage this warp."
       - "&eClick to open"
 
-  confirm-purchase:
-    title: "&8Teleport for %cost%?"
-    accept: "&a&lTELEPORT"
-    accept-lore:
-      - "&7You will be charged &f%cost%&7."
-    cancel: "&c&lCANCEL"
-
   back:
     slot: 0
     material: SPECTRAL_ARROW

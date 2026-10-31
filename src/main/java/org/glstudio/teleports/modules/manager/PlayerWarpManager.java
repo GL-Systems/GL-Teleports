@@ -10,8 +10,10 @@ import org.glstudio.teleports.common.network.packets.InvalidationScope;
 import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.core.util.TeleportNames;
+import org.glstudio.teleports.modules.menu.playerwarp.PlayerWarpConfirmMenu;
 import org.glstudio.teleports.modules.model.PlayerRef;
 import org.glstudio.teleports.modules.model.PlayerWarp;
+import org.glstudio.teleports.modules.model.TeleportRules;
 import org.glstudio.teleports.modules.model.TeleportType;
 
 import java.nio.charset.StandardCharsets;
@@ -626,7 +628,7 @@ public class PlayerWarpManager {
                     "{name}", gate.warp().getName());
             case PASSWORD_REQUIRED -> promptPassword(player, gate.warp(), false);
             case PASSWORD_WRONG -> promptPassword(player, gate.warp(), true);
-            case OK -> proceedToTeleport(player, gate.warp());
+            case OK -> confirmCostThenTeleport(player, gate.warp());
         }
     }
 
@@ -637,6 +639,16 @@ public class PlayerWarpManager {
         plugin.getChatInputManager().request(player,
                 plugin.getMessages().raw("player-warp.password.prompt"),
                 attempt -> attemptTeleport(player, warp.getName(), attempt));
+    }
+
+    private void confirmCostThenTeleport(Player player, PlayerWarp warp) {
+        double cost = TeleportRules.resolve(plugin, player, TeleportType.PLAYER_WARP, warp).cost();
+        if (!plugin.getEconomyManager().chargeable(player, cost)) {
+            proceedToTeleport(player, warp);
+            return;
+        }
+
+        PlayerWarpConfirmMenu.open(plugin, player, warp, cost, () -> proceedToTeleport(player, warp));
     }
 
     private void proceedToTeleport(Player player, PlayerWarp warp) {

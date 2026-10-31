@@ -15,6 +15,7 @@ public class ConfigManager {
     private final ConfigFile playerWarpsMainMenu;
     private final ConfigFile playerWarpsListMenu;
     private final ConfigFile playerWarpsInfoMenu;
+    private final ConfigFile playerWarpsConfirmMenu;
     private final ConfigFile playerWarpsManageMenu;
     private final ConfigFile playerWarpsCategoriesMenu;
     private final ConfigFile playerWarpsRatingMenu;
@@ -36,6 +37,7 @@ public class ConfigManager {
         this.playerWarpsMainMenu = new ConfigFile(plugin, "menus", "player-warps-main.yml");
         this.playerWarpsListMenu = new ConfigFile(plugin, "menus", "player-warps-list.yml");
         this.playerWarpsInfoMenu = new ConfigFile(plugin, "menus", "player-warps-info.yml");
+        this.playerWarpsConfirmMenu = new ConfigFile(plugin, "menus", "player-warps-confirm.yml");
         this.playerWarpsManageMenu = new ConfigFile(plugin, "menus", "player-warps-manage.yml");
         this.playerWarpsCategoriesMenu = new ConfigFile(plugin, "menus", "player-warps-categories.yml");
         this.playerWarpsRatingMenu = new ConfigFile(plugin, "menus", "player-warps-rating.yml");
@@ -58,6 +60,7 @@ public class ConfigManager {
         playerWarpsMainMenu.reload();
         playerWarpsListMenu.reload();
         playerWarpsInfoMenu.reload();
+        playerWarpsConfirmMenu.reload();
         playerWarpsManageMenu.reload();
         playerWarpsCategoriesMenu.reload();
         playerWarpsRatingMenu.reload();

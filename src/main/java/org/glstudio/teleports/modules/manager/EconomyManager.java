@@ -70,7 +70,7 @@ public class EconomyManager {
         return formatCost(getCost(type));
     }
 
-    private boolean chargeable(Player player, double cost) {
+    public boolean chargeable(Player player, double cost) {
         return enabled && cost > 0 && !player.hasPermission(BYPASS_PERMISSION);
     }
 

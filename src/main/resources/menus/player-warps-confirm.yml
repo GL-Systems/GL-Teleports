@@ -1,0 +1,41 @@
+# Asked before teleporting to a player warp that will charge the player. Opens from every way of
+# reaching a warp (/pw <name>, the lists, sponsored slots, the info screen) once the warp's
+# ban/lock/whitelist/password checks have passed. Never shown when nothing would be charged: free
+# warp, economy disabled or golden.teleports.bypass.cost.
+#
+# Closing the menu without clicking counts as cancelling.
+#
+# Placeholders: %name%, %owner%, %world%, %category%, %cost%, %balance%
+#
+# Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA
+# section of purely decorative extra items is supported the same way - see the top of
+# player-warps-list.yml for the full explanation and examples.
+title: "&8Teleport for %cost%?"
+size: 27
+
+items:
+  # Material is taken from the warp's own icon when it has one.
+  display:
+    slot: 13
+    material: GRASS_BLOCK
+    name: "&a&l%name%"
+    lore:
+      - "&7Owner: &f%owner%"
+      - "&7World: &f%world%"
+      - "&7Cost: &f%cost%"
+      - "&7Your balance: &f%balance%"
+
+  confirm:
+    slot: 11
+    material: LIME_CONCRETE
+    name: "&a&lTELEPORT"
+    lore:
+      - "&7You will be charged &f%cost%&7."
+      - "&eClick to confirm"
+
+  cancel:
+    slot: 15
+    material: RED_CONCRETE
+    name: "&c&lCANCEL"
+    lore:
+      - "&eClick to cancel"

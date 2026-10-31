@@ -9,7 +9,6 @@ import org.glstudio.teleports.GTeleports;
 import org.glstudio.nexus.modules.menu.Menu;
 import org.glstudio.nexus.modules.menu.button.Button;
 import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
-import org.glstudio.nexus.modules.menu.extra.ConfirmMenu;
 import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.menu.MenuItems;
 import org.glstudio.teleports.modules.model.PlayerWarp;
@@ -97,7 +96,7 @@ public class PlayerWarpInfoMenu extends Menu {
             buttons.put(displaySlot, display.build());
         }
 
-        MenuItems.put(buttons, cfg, "items.teleport", () -> teleport(viewer, placeholders));
+        MenuItems.put(buttons, cfg, "items.teleport", () -> teleport(viewer));
 
         String favPath = favourite ? "items.favourite-on" : "items.favourite-off";
         int favSlot = MenuItems.slot(cfg, favPath);
@@ -138,31 +137,8 @@ public class PlayerWarpInfoMenu extends Menu {
         return CC.t(status.toString());
     }
 
-    private void teleport(Player viewer, Object[] placeholders) {
-        if (warp.isFree() || viewer.hasPermission(
-                org.glstudio.teleports.core.util.Permissions.PLAYERWARP_BYPASS_COST)) {
-            viewer.closeInventory();
-            plugin.getPlayerWarpManager().attemptTeleport(viewer, warp.getName(), null);
-            return;
-        }
-
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsInfoMenu();
-
-        Button display = MenuItems.builder(cfg, "items.display").build();
-
-        ConfirmMenu.confirm(plugin.getMenuManager(), viewer,
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-purchase.title", "&8Teleport for %cost%?"),
-                        placeholders),
-                display,
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-purchase.accept", "&a&lTELEPORT"), placeholders),
-                MenuItems.apply(cfg.getStringList("items.confirm-purchase.accept-lore"), placeholders),
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-purchase.cancel", "&c&lCANCEL"), placeholders),
-                ButtonBuilder.of(Material.GRAY_STAINED_GLASS_PANE).name(" ").toItemStack(),
-                () -> {
-                    viewer.closeInventory();
-                    plugin.getPlayerWarpManager().attemptTeleport(viewer, warp.getName(), null);
-                },
-                () -> new PlayerWarpInfoMenu(plugin, viewer, warp).open()
-        );
+    private void teleport(Player viewer) {
+        viewer.closeInventory();
+        plugin.getPlayerWarpManager().attemptTeleport(viewer, warp.getName(), null);
     }
 }
