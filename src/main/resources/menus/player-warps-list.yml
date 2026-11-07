@@ -1,3 +1,5 @@
+config-version: 1
+
 # Shared layout for every "list of player warps" screen: browse all, a category, search
 # results, favourites and "my warps". Only the title and the query differ between them.
 #

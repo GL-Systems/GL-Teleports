@@ -6,8 +6,8 @@ import org.glstudio.teleports.modules.migration.WorldDirectory;
 import org.glstudio.teleports.modules.migration.source.MigrationData;
 import org.glstudio.teleports.modules.migration.source.SourceLocation;
 import org.glstudio.teleports.modules.migration.source.SourcePlayerWarp;
-import org.glstudio.teleports.modules.migration.source.SourcePlayerWarpLink;
 import org.glstudio.teleports.modules.migration.source.SourcePlayerWarpLink.Kind;
+import org.glstudio.teleports.modules.migration.source.SourcePlayerWarpLink;
 import org.glstudio.teleports.modules.migration.source.SourcePlayerWarps;
 import org.glstudio.teleports.modules.migration.source.SourceProblem;
 

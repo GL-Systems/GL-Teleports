@@ -13,7 +13,29 @@ import java.util.UUID;
 public record SourcePlayerWarpLink(Kind kind, long warpId, UUID player, String playerName, int stars, String text,
                                    long expiresAt, String origin) {
 
+    /**
+     * What can be selected.
+     */
     public enum Kind {
-        FAVOURITE, RATING, WHITELIST, MANAGER, BAN
+        /**
+         * Favourite.
+         */
+        FAVOURITE,
+        /**
+         * Rating.
+         */
+        RATING,
+        /**
+         * Whitelist.
+         */
+        WHITELIST,
+        /**
+         * Manager.
+         */
+        MANAGER,
+        /**
+         * Ban.
+         */
+        BAN
     }
 }

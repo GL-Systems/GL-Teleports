@@ -1,19 +1,25 @@
 package org.glstudio.teleports.modules.command.spawn;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Permissions;
-import org.glstudio.teleports.modules.command.home.HomeAdmin;
-import org.glstudio.nexus.modules.command.Command;
-import org.glstudio.nexus.modules.command.CommandManager;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.modules.command.Command;
+import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.core.util.Permissions;
+import org.glstudio.teleports.modules.command.home.HomeAdmin;
 
 import java.util.List;
 
+/**
+ * The {@code /spawn} command.
+ */
 public class SpawnCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public SpawnCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;

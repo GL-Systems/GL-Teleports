@@ -30,8 +30,26 @@ public final class PlayerWarpsConfig {
     // The prefix ends up inside SQL text, so anything beyond a plain identifier is refused outright.
     private static final Pattern TABLE_PREFIX = Pattern.compile("[A-Za-z0-9_]{0,48}");
 
+    /**
+     * The supported storage backends.
+     */
     public enum DatabaseType {
-        SQLITE, MYSQL, MARIADB, POSTGRESQL
+        /**
+         * Sqlite.
+         */
+        SQLITE,
+        /**
+         * Mysql.
+         */
+        MYSQL,
+        /**
+         * Mariadb.
+         */
+        MARIADB,
+        /**
+         * Postgresql.
+         */
+        POSTGRESQL
     }
 
     private final DatabaseType type;
@@ -46,6 +64,9 @@ public final class PlayerWarpsConfig {
         this.serverName = serverName;
     }
 
+    /**
+     * Reads the settings from the plugin's folder.
+     */
     public static PlayerWarpsConfig load(Path folder) throws MigrationException {
         Path configFile = folder.resolve("config.yml");
 
@@ -94,18 +115,30 @@ public final class PlayerWarpsConfig {
                 YamlValues.string(YamlValues.get(mysql, "server-name")));
     }
 
+    /**
+     * Returns the backend.
+     */
     public DatabaseType type() {
         return type;
     }
 
+    /**
+     * Returns the login.
+     */
     public Credentials credentials() {
         return credentials;
     }
 
+    /**
+     * Returns a table name.
+     */
     public String table(String name) {
         return tablePrefix + name;
     }
 
+    /**
+     * Returns the table prefix.
+     */
     public String tablePrefix() {
         return tablePrefix;
     }

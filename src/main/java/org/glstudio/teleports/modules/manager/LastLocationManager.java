@@ -3,24 +3,36 @@ package org.glstudio.teleports.modules.manager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.StoredLocation;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Remembers where players logged out.
+ */
 public class LastLocationManager {
     private final GTeleports plugin;
 
+    /**
+     * Creates the manager.
+     */
     public LastLocationManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Tells whether this feature is on.
+     */
     public boolean isEnabled() {
         return plugin.getSettings().getBoolean("last-location.enabled", true);
     }
 
+    /**
+     * Starts the auto save.
+     */
     public void startAutoSave() {
         if (!isEnabled()) {
             return;
@@ -36,6 +48,9 @@ public class LastLocationManager {
         }, ticks, ticks);
     }
 
+    /**
+     * Stores where a player is.
+     */
     public CompletableFuture<Void> save(Player player) {
         if (!isEnabled()) {
             return CompletableFuture.completedFuture(null);
@@ -50,18 +65,24 @@ public class LastLocationManager {
             return CompletableFuture.completedFuture(null);
         }
 
-        return Failures.log(plugin.getDatabaseManager().getProvider().saveLastLocation(
+        return Futures.log(plugin.getDatabaseManager().getProvider().saveLastLocation(
                         player.getUniqueId(),
                         plugin.getCrossServerManager().currentServer(),
                         StoredLocation.of(location)),
                 "LastLocationManager#save");
     }
 
+    /**
+     * Reads where a player was.
+     */
     public CompletableFuture<StoredLocation> find(UUID uuid) {
         return plugin.getDatabaseManager().getProvider().getLastLocation(uuid,
                 plugin.getCrossServerManager().currentServer());
     }
 
+    /**
+     * Teleports a player back to the saved location.
+     */
     public void restore(Player player) {
         if (!isEnabled()) {
             return;
@@ -70,7 +91,7 @@ public class LastLocationManager {
         UUID uuid = player.getUniqueId();
         String server = plugin.getCrossServerManager().currentServer();
 
-        Failures.log(plugin.getDatabaseManager().getProvider().getLastLocation(uuid, server)
+        Futures.log(plugin.getDatabaseManager().getProvider().getLastLocation(uuid, server)
                 .thenAccept(stored -> {
                     if (stored == null) {
                         return;

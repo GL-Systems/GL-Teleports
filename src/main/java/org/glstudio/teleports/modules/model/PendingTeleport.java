@@ -6,6 +6,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 
+/**
+ * A teleport that finishes when the player arrives on this server.
+ */
 @Data
 @NoArgsConstructor
 public class PendingTeleport {
@@ -23,6 +26,9 @@ public class PendingTeleport {
 
     private transient boolean placedAtLogin;
 
+    /**
+     * Creates the pending teleport.
+     */
     public PendingTeleport(TeleportType type, String world, double x, double y, double z,
                            float yaw, float pitch, long expiresAt, String destinationName) {
         this.type = type;
@@ -36,11 +42,17 @@ public class PendingTeleport {
         this.destinationName = destinationName;
     }
 
+    /**
+     * Returns this as a location.
+     */
     public Location toLocation() {
         World bukkitWorld = Bukkit.getWorld(world);
         return bukkitWorld == null ? null : new Location(bukkitWorld, x, y, z, yaw, pitch);
     }
 
+    /**
+     * Tells whether this has run out.
+     */
     public boolean isExpired() {
         return System.currentTimeMillis() >= expiresAt;
     }

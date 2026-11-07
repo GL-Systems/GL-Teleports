@@ -22,15 +22,55 @@ public final class HuskHomesConfig {
     // Table names end up inside SQL text, so anything beyond a plain identifier is refused outright.
     private static final Pattern TABLE_NAME = Pattern.compile("[A-Za-z0-9_]{1,64}");
 
+    /**
+     * The supported storage backends.
+     */
     public enum DatabaseType {
-        SQLITE, H2, MYSQL, MARIADB, POSTGRESQL
+        /**
+         * Sqlite.
+         */
+        SQLITE,
+        /**
+         * H2.
+         */
+        H2,
+        /**
+         * Mysql.
+         */
+        MYSQL,
+        /**
+         * Mariadb.
+         */
+        MARIADB,
+        /**
+         * Postgresql.
+         */
+        POSTGRESQL
     }
 
+    /**
+     * The tables that can be read.
+     */
     public enum Table {
+        /**
+         * Player data.
+         */
         PLAYER_DATA("huskhomes_users"),
+        /**
+         * Position data.
+         */
         POSITION_DATA("huskhomes_position_data"),
+        /**
+         * Saved position data.
+         */
         SAVED_POSITION_DATA("huskhomes_saved_positions"),
+        /**
+         * Home data.
+         */
         HOME_DATA("huskhomes_homes"),
+        /**
+         * Warp data.
+         */
         WARP_DATA("huskhomes_warps");
 
         private final String defaultName;
@@ -57,6 +97,9 @@ public final class HuskHomesConfig {
         this.serverName = serverName;
     }
 
+    /**
+     * Reads the settings from the plugin's folder.
+     */
     public static HuskHomesConfig load(Path folder) throws MigrationException {
         Path configFile = folder.resolve("config.yml");
 
@@ -133,14 +176,23 @@ public final class HuskHomesConfig {
         return names;
     }
 
+    /**
+     * Returns the backend.
+     */
     public DatabaseType type() {
         return type;
     }
 
+    /**
+     * Returns the login.
+     */
     public Credentials credentials() {
         return credentials;
     }
 
+    /**
+     * Returns a table name.
+     */
     public String table(Table table) {
         return tables.get(table);
     }
@@ -150,10 +202,16 @@ public final class HuskHomesConfig {
         return crossServer;
     }
 
+    /**
+     * Tells whether warps need a permission.
+     */
     public boolean restrictedWarps() {
         return restrictedWarps;
     }
 
+    /**
+     * Returns the server name.
+     */
     public String serverName() {
         return serverName;
     }

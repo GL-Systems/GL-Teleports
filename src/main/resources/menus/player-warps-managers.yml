@@ -1,3 +1,5 @@
+config-version: 1
+
 # A warp's manager list - staff-only (see golden.teleports.playerwarp.admin.managers).
 #
 # Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA

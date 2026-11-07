@@ -10,9 +10,15 @@ import org.glstudio.teleports.modules.model.Home;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The {@code /homeuninvite} command.
+ */
 public class HomeUninviteCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public HomeUninviteCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;

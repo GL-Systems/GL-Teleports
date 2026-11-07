@@ -4,6 +4,11 @@ import lombok.Getter;
 import org.glstudio.nexus.utils.ConfigFile;
 import org.glstudio.teleports.GTeleports;
 
+import java.util.List;
+
+/**
+ * Holds every file of the plugin.
+ */
 @Getter
 public class ConfigManager {
     private final ConfigFile mainConfig, languageConfig, databaseConfig;
@@ -25,6 +30,9 @@ public class ConfigManager {
     private final ConfigFile playerWarpsTransferMenu;
     private final ConfigFile playerWarpsAdminMenu;
 
+    /**
+     * Creates the manager.
+     */
     public ConfigManager(GTeleports plugin) {
         this.mainConfig = new ConfigFile(plugin, "config.yml");
         this.languageConfig = new ConfigFile(plugin, "language.yml");
@@ -48,26 +56,22 @@ public class ConfigManager {
         this.playerWarpsAdminMenu = new ConfigFile(plugin, "menus", "player-warps-admin.yml");
     }
 
+    /**
+     * Lists the plugin's files.
+     *
+     * @return every file
+     */
+    public List<ConfigFile> all() {
+        return List.of(
+                mainConfig, languageConfig, databaseConfig, homesMenu,
+                playerWarpsConfig, playerWarpsMainMenu, playerWarpsListMenu, playerWarpsInfoMenu,
+                playerWarpsConfirmMenu, playerWarpsManageMenu, playerWarpsCategoriesMenu, playerWarpsRatingMenu,
+                playerWarpsWhitelistMenu, playerWarpsBansMenu, playerWarpsManagersMenu, playerWarpsTransferMenu,
+                playerWarpsAdminMenu);
+    }
+
+    /** Reloads every file from disk. */
     public void reload() {
-        mainConfig.reload();
-        languageConfig.reload();
-        databaseConfig.reload();
-
-        homesMenu.reload();
-
-        playerWarpsConfig.reload();
-
-        playerWarpsMainMenu.reload();
-        playerWarpsListMenu.reload();
-        playerWarpsInfoMenu.reload();
-        playerWarpsConfirmMenu.reload();
-        playerWarpsManageMenu.reload();
-        playerWarpsCategoriesMenu.reload();
-        playerWarpsRatingMenu.reload();
-        playerWarpsWhitelistMenu.reload();
-        playerWarpsBansMenu.reload();
-        playerWarpsManagersMenu.reload();
-        playerWarpsTransferMenu.reload();
-        playerWarpsAdminMenu.reload();
+        all().forEach(ConfigFile::reload);
     }
 }

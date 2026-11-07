@@ -21,15 +21,24 @@ public record PlayerWarpPlan(List<PlayerWarpImport> imports, MigrationPlan.Count
                              Map<Kind, LinkCounts> links, Map<String, Long> notCarriedOver,
                              List<String> unknownCategories, List<SourceProblem> notes) {
 
+    /**
+     * Returns an empty one.
+     */
     public static PlayerWarpPlan empty() {
         return new PlayerWarpPlan(List.of(), new MigrationPlan.Counts(0, 0, 0, 0, 0, 0, 0, 0), 0, Map.of(),
                 Map.of(), List.of(), List.of());
     }
 
+    /**
+     * Tells whether this holds nothing.
+     */
     public boolean isEmpty() {
         return imports.isEmpty();
     }
 
+    /**
+     * Tells whether anything was found.
+     */
     public boolean found() {
         return counts.found() > 0 || links.values().stream().anyMatch(count -> count.found() > 0);
     }

@@ -50,6 +50,14 @@ public class TpaRequestEvent extends PlayerEvent implements Cancellable {
     @Setter
     private String cancelMessage;
 
+    /**
+     * Creates the event.
+     *
+     * @param requester the requester
+     * @param targetId the target id
+     * @param targetName the target name
+     * @param requestType the request type
+     */
     public TpaRequestEvent(Player requester, UUID targetId, String targetName,
                            TpaRequest.TpaType requestType) {
         super(requester);
@@ -82,6 +90,11 @@ public class TpaRequestEvent extends PlayerEvent implements Cancellable {
         return HANDLERS;
     }
 
+    /**
+     * Returns the handler list of this event.
+     *
+     * @return the handler list
+     */
     public static HandlerList getHandlerList() {
         return HANDLERS;
     }

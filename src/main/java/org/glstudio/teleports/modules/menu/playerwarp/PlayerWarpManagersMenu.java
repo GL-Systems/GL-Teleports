@@ -4,14 +4,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
-import org.glstudio.nexus.utils.CC;
-import org.glstudio.nexus.utils.ConfigFile;
-import org.glstudio.teleports.GTeleports;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.menu.button.Button;
 import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
-import org.glstudio.teleports.modules.menu.ButtonPresets;
+import org.glstudio.nexus.modules.menu.button.ButtonPresets;
+import org.glstudio.nexus.modules.menu.config.MenuConfig;
 import org.glstudio.nexus.modules.menu.paginated.PaginatedMenu;
-import org.glstudio.teleports.core.util.Failures;
+import org.glstudio.nexus.utils.CC;
+import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.menu.MenuItems;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpManagerEntry;
@@ -21,6 +21,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Menu with the managers of a warp.
+ */
 public class PlayerWarpManagersMenu extends PaginatedMenu<Button> {
     private final GTeleports plugin;
     private final PlayerWarp warp;
@@ -28,11 +31,13 @@ public class PlayerWarpManagersMenu extends PaginatedMenu<Button> {
     private volatile List<PlayerWarpManagerEntry> entries;
     private volatile boolean loading = true;
 
+    /**
+     * Creates the menu.
+     */
     public PlayerWarpManagersMenu(GTeleports plugin, Player viewer, PlayerWarp warp) {
         super(plugin.getMenuManager(), viewer,
-                CC.t(MenuItems.apply(MenuItems.string(plugin.getConfigManager().getPlayerWarpsManagersMenu(),
-                        "title", "&8Managers: %name%"), "%name%", warp.getName())),
-                MenuItems.integer(plugin.getConfigManager().getPlayerWarpsManagersMenu(), "size", 54));
+                CC.t(MenuItems.apply(new MenuConfig(plugin.getConfigManager().getPlayerWarpsManagersMenu()).string("title", "&8Managers: %name%"), "%name%", warp.getName())),
+                new MenuConfig(plugin.getConfigManager().getPlayerWarpsManagersMenu()).integer("size", 54));
         this.plugin = plugin;
         this.warp = warp;
         setAutoRefresh(true);
@@ -40,7 +45,7 @@ public class PlayerWarpManagersMenu extends PaginatedMenu<Button> {
     }
 
     private void load() {
-        Failures.log(plugin.getPlayerWarpManagerRoleManager().list(warp.getId()).thenAccept(list -> {
+        Futures.log(plugin.getPlayerWarpManagerRoleManager().list(warp.getId()).thenAccept(list -> {
             entries = list;
             loading = false;
             Bukkit.getScheduler().runTask(plugin, this::update);
@@ -54,7 +59,7 @@ public class PlayerWarpManagersMenu extends PaginatedMenu<Button> {
 
     @Override
     protected List<Integer> getContentSlots() {
-        return MenuItems.intList(plugin.getConfigManager().getPlayerWarpsManagersMenu(), "content-slots");
+        return new MenuConfig(plugin.getConfigManager().getPlayerWarpsManagersMenu()).intList("content-slots");
     }
 
     @Override
@@ -64,18 +69,18 @@ public class PlayerWarpManagersMenu extends PaginatedMenu<Button> {
             return List.of();
         }
 
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsManagersMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsManagersMenu());
         List<Button> items = new ArrayList<>(current.size());
 
         for (PlayerWarpManagerEntry entry : current) {
             OfflinePlayer target = Bukkit.getOfflinePlayer(entry.player());
 
-            ButtonBuilder builder = MenuItems.builder(cfg, "items.entry").material(Material.PLAYER_HEAD);
+            ButtonBuilder builder = cfg.builder("items.entry").material(Material.PLAYER_HEAD);
             builder.skullOwner(target);
-            builder.name(MenuItems.apply(MenuItems.name(cfg, "items.entry", "&b%player%"),
+            builder.name(MenuItems.apply(cfg.name("items.entry", "&b%player%"),
                     "%player%", entry.playerName()));
-            builder.lore(MenuItems.apply(MenuItems.lore(cfg, "items.entry"), "%player%", entry.playerName()));
-            builder.onClickSimple(() -> Failures.log(plugin.getPlayerWarpManagerRoleManager()
+            builder.lore(MenuItems.apply(cfg.lore("items.entry"), "%player%", entry.playerName()));
+            builder.onClickSimple(() -> Futures.log(plugin.getPlayerWarpManagerRoleManager()
                     .remove(viewer, warp, entry.playerName())
                     .thenRun(this::load), "PlayerWarpManagersMenu#remove"));
 
@@ -93,48 +98,48 @@ public class PlayerWarpManagersMenu extends PaginatedMenu<Button> {
     @Override
     protected Button getEmptyButton(Player viewer) {
         if (loading) {
-            return ButtonPresets.loading();
+            return ButtonPresets.loading("&eLoading...", "&7Please wait");
         }
-        return MenuItems.builder(plugin.getConfigManager().getPlayerWarpsManagersMenu(), "items.empty").build();
+        return new MenuConfig(plugin.getConfigManager().getPlayerWarpsManagersMenu()).builder("items.empty").build();
     }
 
     @Override
     protected int getEmptySlot(Player viewer) {
-        return MenuItems.slot(plugin.getConfigManager().getPlayerWarpsManagersMenu(), "items.empty");
+        return new MenuConfig(plugin.getConfigManager().getPlayerWarpsManagersMenu()).slot("items.empty");
     }
 
     @Override
     protected Map<Integer, Button> getStaticButtons(Player viewer, int currentPage, int maxPage) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsManagersMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsManagersMenu());
         Map<Integer, Button> buttons = new HashMap<>();
 
-        int infoSlot = MenuItems.slot(cfg, "items.info");
+        int infoSlot = cfg.slot("items.info");
         if (infoSlot >= 0) {
             int count = entries == null ? 0 : entries.size();
-            ButtonBuilder info = MenuItems.builder(cfg, "items.info");
-            info.lore(MenuItems.apply(MenuItems.lore(cfg, "items.info"), "%count%", count));
+            ButtonBuilder info = cfg.builder("items.info");
+            info.lore(MenuItems.apply(cfg.lore("items.info"), "%count%", count));
             buttons.put(infoSlot, info.build());
         }
 
         if (currentPage > 0) {
-            MenuItems.put(buttons, cfg, "items.previous-page", this::previousPage);
+            cfg.put(buttons, "items.previous-page", this::previousPage);
         }
         if (currentPage < maxPage) {
-            MenuItems.put(buttons, cfg, "items.next-page", this::nextPage);
+            cfg.put(buttons, "items.next-page", this::nextPage);
         }
 
-        MenuItems.put(buttons, cfg, "items.add", () -> promptAdd(viewer));
-        MenuItems.put(buttons, cfg, "items.back", () -> new PlayerWarpManageMenu(plugin, viewer, warp).open());
-        MenuItems.put(buttons, cfg, "items.close", viewer::closeInventory);
+        cfg.put(buttons, "items.add", () -> promptAdd(viewer));
+        cfg.put(buttons, "items.back", () -> new PlayerWarpManageMenu(plugin, viewer, warp).open());
+        cfg.put(buttons, "items.close", viewer::closeInventory);
 
         return buttons;
     }
 
     private void promptAdd(Player viewer) {
         viewer.closeInventory();
-        plugin.getChatInputManager().request(viewer,
+        plugin.getChatPrompts().request(viewer,
                 MenuItems.prompt(plugin, "player-warp.prompts.managers-add", "{name}", warp.getName()),
-                name -> Failures.log(plugin.getPlayerWarpManagerRoleManager().add(viewer, warp, name).thenRun(() ->
+                name -> Futures.log(plugin.getPlayerWarpManagerRoleManager().add(viewer, warp, name).thenRun(() ->
                         Bukkit.getScheduler().runTask(plugin, () ->
                                 new PlayerWarpManagersMenu(plugin, viewer, warp).open())),
                         "PlayerWarpManagersMenu#add"),

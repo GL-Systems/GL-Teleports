@@ -1,20 +1,20 @@
 package org.glstudio.teleports.modules.manager;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.api.Events;
-import org.glstudio.teleports.api.event.HomeCreateEvent;
-import org.glstudio.teleports.api.event.HomeDeleteEvent;
-import org.glstudio.teleports.core.util.Permissions;
-import org.glstudio.teleports.common.network.packets.InvalidationScope;
-import org.glstudio.teleports.core.util.Failures;
-import org.glstudio.teleports.core.util.TeleportNames;
-import org.glstudio.teleports.modules.model.Home;
-import org.glstudio.teleports.modules.model.TeleportType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.api.Events;
+import org.glstudio.teleports.api.event.HomeCreateEvent;
+import org.glstudio.teleports.api.event.HomeDeleteEvent;
+import org.glstudio.teleports.common.network.packets.InvalidationScope;
+import org.glstudio.teleports.core.util.Permissions;
+import org.glstudio.teleports.core.util.TeleportNames;
+import org.glstudio.teleports.modules.model.Home;
+import org.glstudio.teleports.modules.model.TeleportType;
 
 import java.util.List;
 import java.util.Locale;
@@ -22,6 +22,9 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Creates, moves and deletes homes.
+ */
 public class HomeManager {
     public static final int UNLIMITED = -1;
 
@@ -33,10 +36,16 @@ public class HomeManager {
 
     private final ConcurrentHashMap<UUID, List<String>> shareLabels = new ConcurrentHashMap<>();
 
+    /**
+     * Creates the manager.
+     */
     public HomeManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Returns the homes.
+     */
     public CompletableFuture<List<Home>> getHomes(UUID owner) {
         return homeCache.computeIfAbsent(owner, id -> {
             CompletableFuture<List<Home>> pending = plugin.getDatabaseManager().getProvider()
@@ -53,6 +62,9 @@ public class HomeManager {
         });
     }
 
+    /**
+     * Returns the cached homes.
+     */
     public List<Home> getCachedHomes(UUID owner) {
         CompletableFuture<List<Home>> cached = homeCache.get(owner);
 
@@ -60,10 +72,13 @@ public class HomeManager {
             return cached.join();
         }
 
-        Failures.log(getHomes(owner), "HomeManager#warmCache");
+        Futures.log(getHomes(owner), "HomeManager#warmCache");
         return List.of();
     }
 
+    /**
+     * Returns the home.
+     */
     public CompletableFuture<Home> getHome(UUID owner, String name) {
         String normalized = TeleportNames.normalize(name);
 
@@ -73,6 +88,9 @@ public class HomeManager {
                 .orElse(null));
     }
 
+    /**
+     * Sets the home.
+     */
     public CompletableFuture<Void> setHome(Player player, String name) {
         if (!TeleportNames.isValid(name)) {
             plugin.getMessages().send(player, "errors.invalid-name",
@@ -121,9 +139,12 @@ public class HomeManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "HomeManager#setHome", player);
+        return Futures.guard(result, "HomeManager#setHome", player);
     }
 
+    /**
+     * Finds the next free default name.
+     */
     public CompletableFuture<String> nextAutomaticName(UUID owner) {
         return getHomes(owner).thenApply(homes -> {
             for (int index = 1; ; index++) {
@@ -137,6 +158,9 @@ public class HomeManager {
         });
     }
 
+    /**
+     * Deletes the home.
+     */
     public CompletableFuture<Void> deleteHome(Player player, String name) {
         String normalized = TeleportNames.normalize(name);
 
@@ -161,9 +185,12 @@ public class HomeManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "HomeManager#deleteHome", player);
+        return Futures.guard(result, "HomeManager#deleteHome", player);
     }
 
+    /**
+     * Sets the home for.
+     */
     public CompletableFuture<Void> setHomeFor(CommandSender staff, UUID owner, String ownerName,
                                               String name, Location location) {
         if (!TeleportNames.isValid(name)) {
@@ -186,9 +213,12 @@ public class HomeManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "HomeManager#setHomeFor", staff);
+        return Futures.guard(result, "HomeManager#setHomeFor", staff);
     }
 
+    /**
+     * Deletes the home for.
+     */
     public CompletableFuture<Void> deleteHomeFor(CommandSender staff, UUID owner, String ownerName, String name) {
         String normalized = TeleportNames.normalize(name);
 
@@ -207,9 +237,12 @@ public class HomeManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "HomeManager#deleteHomeFor", staff);
+        return Futures.guard(result, "HomeManager#deleteHomeFor", staff);
     }
 
+    /**
+     * Renames a home.
+     */
     public CompletableFuture<Void> renameHome(Player player, String from, String to) {
         if (!TeleportNames.isValid(to)) {
             plugin.getMessages().send(player, "errors.invalid-name",
@@ -250,9 +283,12 @@ public class HomeManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "HomeManager#renameHome", player);
+        return Futures.guard(result, "HomeManager#renameHome", player);
     }
 
+    /**
+     * Moves a home to the player.
+     */
     public CompletableFuture<Void> moveHome(Player player, String name) {
         UUID owner = player.getUniqueId();
         String normalized = TeleportNames.normalize(name);
@@ -276,9 +312,12 @@ public class HomeManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "HomeManager#moveHome", player);
+        return Futures.guard(result, "HomeManager#moveHome", player);
     }
 
+    /**
+     * Creates the home.
+     */
     public CompletableFuture<Boolean> createHome(UUID owner, String name, Location location) {
         if (!TeleportNames.isValid(name) || location == null || location.getWorld() == null) {
             return CompletableFuture.completedFuture(false);
@@ -294,6 +333,9 @@ public class HomeManager {
                 });
     }
 
+    /**
+     * Removes the home.
+     */
     public CompletableFuture<Boolean> removeHome(UUID owner, String name) {
         String normalized = TeleportNames.normalize(name);
 
@@ -311,6 +353,9 @@ public class HomeManager {
         });
     }
 
+    /**
+     * Drops what is cached.
+     */
     public void invalidate(UUID owner) {
         if (owner == null) {
             homeCache.clear();
@@ -319,6 +364,9 @@ public class HomeManager {
         homeCache.remove(owner);
     }
 
+    /**
+     * Forgets what is held for a player.
+     */
     public void forget(UUID owner) {
         homeCache.remove(owner);
         shareLabels.remove(owner);
@@ -329,8 +377,11 @@ public class HomeManager {
         plugin.getCrossServerManager().broadcastInvalidation(InvalidationScope.HOME, owner);
     }
 
+    /**
+     * Teleports the to home.
+     */
     public void teleportToHome(Player player, String name) {
-        Failures.log(getHome(player.getUniqueId(), name).thenAccept(home -> {
+        Futures.log(getHome(player.getUniqueId(), name).thenAccept(home -> {
             if (home == null) {
                 plugin.getMessages().send(player, "errors.home-not-found", "{name}", name);
                 return;
@@ -340,10 +391,13 @@ public class HomeManager {
         }), "HomeManager#teleportToHome");
     }
 
+    /**
+     * Teleports the to shared home.
+     */
     public void teleportToSharedHome(Player player, UUID owner, String ownerName, String name) {
         String normalized = TeleportNames.normalize(name);
 
-        Failures.log(plugin.getHomeShareManager().mayUse(player.getUniqueId(), owner, normalized)
+        Futures.log(plugin.getHomeShareManager().mayUse(player.getUniqueId(), owner, normalized)
                 .thenCompose(allowed -> {
                     if (!allowed) {
                         plugin.getMessages().send(player, "errors.home-not-shared",
@@ -363,8 +417,11 @@ public class HomeManager {
                 }), "HomeManager#teleportToSharedHome");
     }
 
+    /**
+     * Teleports the to home of.
+     */
     public void teleportToHomeOf(Player player, UUID owner, String ownerName, String name) {
-        Failures.log(getHome(owner, TeleportNames.normalize(name)).thenAccept(home -> {
+        Futures.log(getHome(owner, TeleportNames.normalize(name)).thenAccept(home -> {
             if (home == null) {
                 plugin.getMessages().send(player, "errors.home-not-found-other",
                         "{name}", name, "{player}", ownerName);
@@ -375,16 +432,22 @@ public class HomeManager {
         }), "HomeManager#teleportToHomeOf");
     }
 
+    /**
+     * Returns the cached share labels.
+     */
     public List<String> getCachedShareLabels(UUID invitee) {
         return shareLabels.getOrDefault(invitee, List.of());
     }
 
+    /**
+     * Refreshes the share labels.
+     */
     public void refreshShareLabels(UUID invitee) {
         if (!plugin.getHomeShareManager().isEnabled()) {
             return;
         }
 
-        Failures.log(plugin.getHomeShareManager().incoming(invitee).thenAccept(shares ->
+        Futures.log(plugin.getHomeShareManager().incoming(invitee).thenAccept(shares ->
                 shareLabels.put(invitee, shares.stream()
                         .map(share -> (share.ownerName() == null ? share.owner().toString()
                                 : share.ownerName()) + ":" + share.home())
@@ -414,10 +477,16 @@ public class HomeManager {
         });
     }
 
+    /**
+     * Returns the world limit.
+     */
     public int getWorldLimit(Player player, String world) {
         return scopedLimit(player, "home-limits.per-world." + world.toLowerCase(Locale.ROOT));
     }
 
+    /**
+     * Returns the server limit.
+     */
     public int getServerLimit(Player player, String server) {
         return scopedLimit(player, "home-limits.per-server."
                 + (server == null ? "unnamed-server" : server.toLowerCase(Locale.ROOT)));
@@ -466,6 +535,9 @@ public class HomeManager {
         return false;
     }
 
+    /**
+     * Returns the home limit.
+     */
     public int getHomeLimit(Player player) {
         if (player.hasPermission(LIMIT_PERMISSION + "unlimited")) {
             return UNLIMITED;
@@ -496,6 +568,9 @@ public class HomeManager {
         return limit;
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         homeCache.clear();
         shareLabels.clear();

@@ -1,3 +1,5 @@
+config-version: 1
+
 # The /homes menu.
 #
 # Left click an entry to travel, right click to delete it behind a confirmation.

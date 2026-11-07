@@ -1,3 +1,5 @@
+config-version: 1
+
 # /pw admin - staff overview of every player warp, plus maintenance actions.
 #
 # Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA

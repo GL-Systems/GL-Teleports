@@ -3,13 +3,13 @@ package org.glstudio.teleports.modules.menu.playerwarp;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.glstudio.nexus.utils.CC;
-import org.glstudio.nexus.utils.ConfigFile;
-import org.glstudio.teleports.GTeleports;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.menu.Menu;
 import org.glstudio.nexus.modules.menu.button.Button;
 import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
-import org.glstudio.teleports.core.util.Failures;
+import org.glstudio.nexus.modules.menu.config.MenuConfig;
+import org.glstudio.nexus.utils.CC;
+import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.menu.MenuItems;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpCategory;
@@ -18,6 +18,9 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Menu with the details of a warp.
+ */
 public class PlayerWarpInfoMenu extends Menu {
     private final GTeleports plugin;
     private final PlayerWarp warp;
@@ -26,11 +29,13 @@ public class PlayerWarpInfoMenu extends Menu {
     private volatile boolean mayManage;
     private volatile boolean loaded;
 
+    /**
+     * Creates the menu.
+     */
     public PlayerWarpInfoMenu(GTeleports plugin, Player viewer, PlayerWarp warp) {
         super(plugin.getMenuManager(), viewer,
-                CC.t(MenuItems.apply(MenuItems.string(plugin.getConfigManager().getPlayerWarpsInfoMenu(),
-                        "title", "&8%name%"), "%name%", warp.getName())),
-                MenuItems.integer(plugin.getConfigManager().getPlayerWarpsInfoMenu(), "size", 27));
+                CC.t(MenuItems.apply(new MenuConfig(plugin.getConfigManager().getPlayerWarpsInfoMenu()).string("title", "&8%name%"), "%name%", warp.getName())),
+                new MenuConfig(plugin.getConfigManager().getPlayerWarpsInfoMenu()).integer("size", 27));
         this.plugin = plugin;
         this.warp = warp;
         setAutoRefresh(true);
@@ -38,7 +43,7 @@ public class PlayerWarpInfoMenu extends Menu {
     }
 
     private void load() {
-        Failures.log(plugin.getPlayerWarpFavouriteManager().isFavourite(viewer.getUniqueId(), warp.getId())
+        Futures.log(plugin.getPlayerWarpFavouriteManager().isFavourite(viewer.getUniqueId(), warp.getId())
                 .thenCombine(plugin.getPlayerWarpManagerRoleManager().mayManage(warp, viewer.getUniqueId()),
                         (fav, manage) -> {
                             favourite = fav;
@@ -64,7 +69,7 @@ public class PlayerWarpInfoMenu extends Menu {
     }
 
     private Map<Integer, Button> getButtons(Player viewer) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsInfoMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsInfoMenu());
         Map<Integer, Button> buttons = new HashMap<>();
 
         PlayerWarpCategory category = plugin.getPlayerWarpCategoryRegistry().get(warp.getCategoryId());
@@ -84,41 +89,41 @@ public class PlayerWarpInfoMenu extends Menu {
                 "%status%", status
         };
 
-        int displaySlot = MenuItems.slot(cfg, "items.display");
+        int displaySlot = cfg.slot("items.display");
         if (displaySlot >= 0) {
             Material material = warp.getIcon() != null
                     ? ButtonBuilder.parseMaterial(warp.getIcon(), Material.GRASS_BLOCK, "player warp info")
                     : Material.GRASS_BLOCK;
 
-            ButtonBuilder display = MenuItems.builder(cfg, "items.display").material(material);
-            display.name(MenuItems.apply(MenuItems.name(cfg, "items.display", "&a%name%"), placeholders));
-            display.lore(MenuItems.apply(MenuItems.lore(cfg, "items.display"), placeholders));
+            ButtonBuilder display = cfg.builder("items.display").material(material);
+            display.name(MenuItems.apply(cfg.name("items.display", "&a%name%"), placeholders));
+            display.lore(MenuItems.apply(cfg.lore("items.display"), placeholders));
             buttons.put(displaySlot, display.build());
         }
 
-        MenuItems.put(buttons, cfg, "items.teleport", () -> teleport(viewer));
+        cfg.put(buttons, "items.teleport", () -> teleport(viewer));
 
         String favPath = favourite ? "items.favourite-on" : "items.favourite-off";
-        int favSlot = MenuItems.slot(cfg, favPath);
+        int favSlot = cfg.slot(favPath);
         if (favSlot >= 0) {
-            buttons.put(favSlot, MenuItems.builder(cfg, favPath)
+            buttons.put(favSlot, cfg.builder(favPath)
                     .onClickSimple(() -> plugin.getPlayerWarpFavouriteManager().toggle(viewer, warp)
                             .thenRun(() -> Bukkit.getScheduler().runTask(plugin, () ->
                                     new PlayerWarpInfoMenu(plugin, viewer, warp).open())))
                     .build());
         }
 
-        MenuItems.put(buttons, cfg, "items.rate", () -> new PlayerWarpRatingMenu(plugin, viewer, warp).open());
+        cfg.put(buttons, "items.rate", () -> new PlayerWarpRatingMenu(plugin, viewer, warp).open());
 
         if (mayManage) {
-            MenuItems.put(buttons, cfg, "items.manage", () -> new PlayerWarpManageMenu(plugin, viewer, warp).open());
+            cfg.put(buttons, "items.manage", () -> new PlayerWarpManageMenu(plugin, viewer, warp).open());
         }
 
-        MenuItems.put(buttons, cfg, "items.back",
+        cfg.put(buttons, "items.back",
                 () -> new PlayerWarpListMenu(plugin, viewer, PlayerWarpListMenu.Mode.ALL, null).open());
-        MenuItems.put(buttons, cfg, "items.close", viewer::closeInventory);
+        cfg.put(buttons, "items.close", viewer::closeInventory);
 
-        MenuItems.putExtras(buttons, cfg, "extra");
+        cfg.putExtras(buttons, "extra");
 
         return buttons;
     }

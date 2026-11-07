@@ -14,6 +14,9 @@ public final class WorldDirectory {
     private final Map<UUID, String> namesById;
     private final Set<String> lowerCaseNames;
 
+    /**
+     * Creates the world directory.
+     */
     public WorldDirectory(Map<UUID, String> namesById) {
         this.namesById = Map.copyOf(namesById);
         this.lowerCaseNames = namesById.values().stream()
@@ -21,14 +24,23 @@ public final class WorldDirectory {
                 .collect(Collectors.toUnmodifiableSet());
     }
 
+    /**
+     * Returns an empty one.
+     */
     public static WorldDirectory empty() {
         return new WorldDirectory(Map.of());
     }
 
+    /**
+     * Finds a world's name.
+     */
     public String nameOf(UUID id) {
         return namesById.get(id);
     }
 
+    /**
+     * Tells whether a world is loaded.
+     */
     public boolean isLoaded(String worldName) {
         return worldName != null && lowerCaseNames.contains(worldName.toLowerCase(Locale.ROOT));
     }

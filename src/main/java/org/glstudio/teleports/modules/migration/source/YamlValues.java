@@ -22,6 +22,9 @@ public final class YamlValues {
     private YamlValues() {
     }
 
+    /**
+     * Reads a YAML file.
+     */
     public static Map<?, ?> load(Path file) throws IOException {
         LoaderOptions options = new LoaderOptions();
         options.setAllowDuplicateKeys(true);
@@ -32,6 +35,9 @@ public final class YamlValues {
         }
     }
 
+    /**
+     * Reads a dotted path.
+     */
     public static Object path(Map<?, ?> root, String path) {
         Object current = root;
 
@@ -45,6 +51,9 @@ public final class YamlValues {
         return current;
     }
 
+    /**
+     * Reads a key.
+     */
     public static Object get(Map<?, ?> map, String key) {
         if (map.containsKey(key)) {
             return map.get(key);
@@ -59,11 +68,17 @@ public final class YamlValues {
         return null;
     }
 
+    /**
+     * Reads a section.
+     */
     public static Map<?, ?> section(Map<?, ?> root, String path) {
         Object value = path(root, path);
         return value instanceof Map<?, ?> map ? map : null;
     }
 
+    /**
+     * Reads a text.
+     */
     public static String string(Object value) {
         if (value == null) {
             return null;
@@ -92,6 +107,9 @@ public final class YamlValues {
         return Double.NaN;
     }
 
+    /**
+     * Reads a flag.
+     */
     public static boolean bool(Object value, boolean fallback) {
         if (value instanceof Boolean flag) {
             return flag;

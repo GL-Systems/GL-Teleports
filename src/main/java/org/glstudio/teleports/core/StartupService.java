@@ -2,24 +2,32 @@ package org.glstudio.teleports.core;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
-import org.glstudio.nexus.modules.command.Command;
+import org.glstudio.nexus.api.NexusAPI;
+import org.glstudio.nexus.concurrent.Futures;
+import org.glstudio.nexus.concurrent.NexusExecutors;
+import org.glstudio.nexus.hooks.placeholder.PlaceholderHooks;
 import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.nexus.modules.lang.LanguageFile;
+import org.glstudio.nexus.proxy.ProxyMessenger;
+import org.glstudio.nexus.utils.Diagnostics;
 import org.glstudio.nexus.utils.LoggerUtils;
+import org.glstudio.nexus.utils.TextFormat;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.common.concurrent.TeleportExecutors;
+import org.glstudio.teleports.api.GLTeleportsAPI;
+import org.glstudio.teleports.api.TeleportsAPI;
 import org.glstudio.teleports.common.config.ConfigValidator;
-import org.glstudio.teleports.common.config.Messages;
 import org.glstudio.teleports.common.config.MultiServerSettings;
-import org.glstudio.teleports.common.config.Settings;
-import org.glstudio.teleports.core.util.Diagnostics;
+import org.glstudio.teleports.common.network.PacketHandler;
+import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
+import org.glstudio.teleports.common.storage.redis.RedisService;
 import org.glstudio.teleports.core.util.Permissions;
-import org.glstudio.teleports.modules.database.DatabaseType;
-import org.glstudio.teleports.modules.manager.Confirmations;
-import org.glstudio.teleports.modules.service.BackupService;
-import org.glstudio.teleports.modules.command.home.DelHomeCommand;
 import org.glstudio.teleports.modules.command.GLTeleportsCommand;
-import org.glstudio.teleports.modules.command.home.HomeAdmin;
+import org.glstudio.teleports.modules.command.home.DelHomeCommand;
 import org.glstudio.teleports.modules.command.home.HomeCommand;
+import org.glstudio.teleports.modules.command.home.HomeInviteCommand;
+import org.glstudio.teleports.modules.command.home.HomeInvitesCommand;
+import org.glstudio.teleports.modules.command.home.HomeUninviteCommand;
+import org.glstudio.teleports.modules.command.home.HomesCommand;
 import org.glstudio.teleports.modules.command.home.ListHomesCommand;
 import org.glstudio.teleports.modules.command.home.MoveHomeCommand;
 import org.glstudio.teleports.modules.command.home.RenameHomeCommand;
@@ -28,6 +36,7 @@ import org.glstudio.teleports.modules.command.spawn.SetSpawnCommand;
 import org.glstudio.teleports.modules.command.spawn.SpawnCommand;
 import org.glstudio.teleports.modules.command.tpa.TpAcceptCommand;
 import org.glstudio.teleports.modules.command.tpa.TpDenyCommand;
+import org.glstudio.teleports.modules.command.tpa.TpaBlockCommand;
 import org.glstudio.teleports.modules.command.tpa.TpaCancelCommand;
 import org.glstudio.teleports.modules.command.tpa.TpaCommand;
 import org.glstudio.teleports.modules.command.tpa.TpaHereCommand;
@@ -38,19 +47,8 @@ import org.glstudio.teleports.modules.command.warp.EditWarpCommand;
 import org.glstudio.teleports.modules.command.warp.SetWarpCommand;
 import org.glstudio.teleports.modules.command.warp.WarpCommand;
 import org.glstudio.teleports.modules.command.warp.WarpsCommand;
-import org.glstudio.teleports.api.GLTeleportsAPI;
-import org.glstudio.teleports.api.TeleportsAPI;
-import org.glstudio.nexus.modules.menu.MenuManager;
-import org.glstudio.teleports.common.network.PacketHandler;
-import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
-import org.glstudio.teleports.common.storage.redis.RedisService;
-import org.glstudio.teleports.modules.command.home.HomeInviteCommand;
-import org.glstudio.teleports.modules.command.home.HomeInvitesCommand;
-import org.glstudio.teleports.modules.command.home.HomeUninviteCommand;
-import org.glstudio.teleports.modules.command.home.HomesCommand;
-import org.glstudio.teleports.modules.command.tpa.TpaBlockCommand;
 import org.glstudio.teleports.modules.database.DatabaseManager;
-import org.glstudio.teleports.modules.placeholder.TeleportsExpansion;
+import org.glstudio.teleports.modules.database.DatabaseType;
 import org.glstudio.teleports.modules.listener.ArrivalListener;
 import org.glstudio.teleports.modules.listener.BedRespawnListener;
 import org.glstudio.teleports.modules.listener.DamageListener;
@@ -62,7 +60,8 @@ import org.glstudio.teleports.modules.listener.RespawnListener;
 import org.glstudio.teleports.modules.manager.BackManager;
 import org.glstudio.teleports.modules.manager.BedRespawnManager;
 import org.glstudio.teleports.modules.manager.BlacklistWorldManager;
-import org.glstudio.teleports.modules.manager.ChatInputManager;
+import org.glstudio.teleports.modules.manager.ChatPrompts;
+import org.glstudio.teleports.modules.manager.Confirmations;
 import org.glstudio.teleports.modules.manager.CooldownManager;
 import org.glstudio.teleports.modules.manager.CrossServerManager;
 import org.glstudio.teleports.modules.manager.DelayManager;
@@ -83,7 +82,6 @@ import org.glstudio.teleports.modules.manager.PlayerWarpManagerRoleManager;
 import org.glstudio.teleports.modules.manager.PlayerWarpRatingManager;
 import org.glstudio.teleports.modules.manager.PlayerWarpSponsorManager;
 import org.glstudio.teleports.modules.manager.PlayerWarpWhitelistManager;
-import org.glstudio.teleports.modules.service.PlayerWarpPurgeService;
 import org.glstudio.teleports.modules.manager.SpawnManager;
 import org.glstudio.teleports.modules.manager.TeleportManager;
 import org.glstudio.teleports.modules.manager.TeleportQueue;
@@ -92,12 +90,15 @@ import org.glstudio.teleports.modules.manager.TpaBlockManager;
 import org.glstudio.teleports.modules.manager.TpaManager;
 import org.glstudio.teleports.modules.manager.WarpManager;
 import org.glstudio.teleports.modules.migration.MigrationManager;
-import org.glstudio.teleports.modules.transfer.BungeePlayerTransferService;
-import org.glstudio.teleports.modules.transfer.PlayerTransferService;
+import org.glstudio.teleports.modules.placeholder.TeleportsExpansion;
+import org.glstudio.teleports.modules.service.BackupService;
+import org.glstudio.teleports.modules.service.PlayerWarpPurgeService;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Starts the plugin and keeps what enabling multi-server support later needs.
+ */
 public class StartupService {
     private static final int CONFIG_VERSION = 1;
 
@@ -105,11 +106,31 @@ public class StartupService {
 
     private final GTeleports plugin;
 
+    /**
+     * Creates the service.
+     *
+     * @param plugin the owning plugin
+     */
     public StartupService(GTeleports plugin) {
         this.plugin = plugin;
     }
 
-    public boolean initialize() {
+    /**
+     * Runs the whole startup.
+     *
+     * @return whether the plugin may stay enabled
+     */
+    public boolean start() {
+        if (!loadAll()) {
+            LoggerUtils.logError("Plugin initialization failed! Disabling...");
+            return false;
+        }
+
+        LoggerUtils.sendEnable(plugin);
+        return true;
+    }
+
+    private boolean loadAll() {
         if (!loadConfigs()) return false;
         if (!loadExecutors()) return false;
         if (!loadDatabase()) return false;
@@ -122,22 +143,23 @@ public class StartupService {
         registerPlaceholders();
 
         startPacketDelivery();
-
-        LoggerUtils.sendEnable(plugin);
         return true;
     }
 
     private boolean loadConfigs() {
         try {
-            plugin.setConfigManager(new ConfigManager(plugin));
-            plugin.setMessages(new Messages(plugin));
-            plugin.setSettings(new Settings(plugin));
+            ConfigManager configs = new ConfigManager(plugin);
+            plugin.setConfigManager(configs);
+            plugin.setMessages(new LanguageFile(configs.getLanguageConfig(), TextFormat.MINIMESSAGE).prefixPath("prefix"));
+            plugin.setSettings(configs.getMainConfig().resolved());
             plugin.setConfirmations(new Confirmations());
-            plugin.getMessages().applyToNexus();
+            plugin.setCommandManager(NexusAPI.get().createCommandManager(plugin));
+            plugin.getMessages().applyTo(plugin.getCommandManager(), "errors.no-permission", "errors.player-only");
+            Futures.setFailureNotifier((sender, error) -> plugin.getMessages().send(sender, "errors.database-error"));
 
             plugin.setMultiServerSettings(new MultiServerSettings(plugin.getConfigManager().getMainConfig()));
 
-            checkConfigVersions();
+            plugin.getConfigManager().all().forEach(file -> file.checkVersion(CONFIG_VERSION, LoggerUtils::logWarn));
             reportLegacyKeys();
 
             ConfigValidator validator = new ConfigValidator(plugin);
@@ -159,33 +181,14 @@ public class StartupService {
         }
     }
 
-    private void checkConfigVersions() {
-        record Tracked(String name, org.glstudio.nexus.utils.ConfigFile file) {
-        }
-
-        List<Tracked> files = List.of(
-                new Tracked("config.yml", plugin.getConfigManager().getMainConfig()),
-                new Tracked("language.yml", plugin.getConfigManager().getLanguageConfig()),
-                new Tracked("database.yml", plugin.getConfigManager().getDatabaseConfig()),
-                new Tracked("player-warps.yml", plugin.getConfigManager().getPlayerWarpsConfig()));
-
-        for (Tracked tracked : files) {
-            int found = tracked.file().getInt("config-version", 0);
-
-            if (found < CONFIG_VERSION) {
-                LoggerUtils.logWarn(tracked.name() + " is version " + found + "; this build expects "
-                        + CONFIG_VERSION + ". Missing keys fall back to the bundled defaults, but new "
-                        + "settings will not appear in your file. Compare it against the copy in the jar.");
-            }
-        }
-    }
-
     private boolean loadExecutors() {
         try {
             int poolSize = plugin.getConfigManager().getDatabaseConfig().getInt("mysql.pool-size", 10);
-            plugin.setExecutors(new TeleportExecutors(poolSize));
+            plugin.setExecutors(NexusExecutors.builder(plugin.getName())
+                    .ioThreads(Math.max(2, poolSize))
+                    .scheduler(true)
+                    .build());
             plugin.setMultiServerSupervisor(new MultiServerSupervisor(plugin));
-            plugin.setCommandRegistry(new CommandRegistry(plugin));
             return true;
         } catch (Exception e) {
             Diagnostics.logFailure("StartupService#loadExecutors", e);
@@ -220,7 +223,7 @@ public class StartupService {
         }
 
         try {
-            TeleportExecutors executors = plugin.getExecutors();
+            NexusExecutors executors = plugin.getExecutors();
 
             RedisService redisService = new RedisService(executors, settings);
 
@@ -230,16 +233,16 @@ public class StartupService {
             PacketHandler packetHandler = new PacketHandler(settings, executors, redisService);
             plugin.setPacketHandler(packetHandler);
 
-            PlayerTransferService transferService = new BungeePlayerTransferService(plugin);
-            transferService.register();
-            plugin.setPlayerTransferService(transferService);
+            ProxyMessenger proxyMessenger = new ProxyMessenger(plugin);
+            proxyMessenger.register();
+            plugin.setProxyMessenger(proxyMessenger);
 
             PlayerRegistry playerRegistry = new PlayerRegistry(plugin, redisService, executors, settings);
             playerRegistry.startHeartbeat();
             plugin.setPlayerRegistry(playerRegistry);
 
             CrossServerManager crossServerManager =
-                    new CrossServerManager(plugin, settings, packetHandler, transferService, playerRegistry);
+                    new CrossServerManager(plugin, settings, packetHandler, proxyMessenger, playerRegistry);
             plugin.setCrossServerManager(crossServerManager);
 
             packetHandler.setCrossServerManager(crossServerManager);
@@ -298,11 +301,14 @@ public class StartupService {
             plugin.setPlayerRegistry(null);
         }
         if (plugin.getRedisService() != null) {
-            plugin.getRedisService().close().join();
+            plugin.getRedisService().close();
             plugin.setRedisService(null);
         }
         plugin.setPacketHandler(null);
-        plugin.setPlayerTransferService(null);
+        if (plugin.getProxyMessenger() != null) {
+            plugin.getProxyMessenger().close();
+            plugin.setProxyMessenger(null);
+        }
     }
 
     private boolean loadManagers() {
@@ -328,7 +334,8 @@ public class StartupService {
             plugin.setHomeShareManager(new HomeShareManager(plugin));
             plugin.setTpaBlockManager(new TpaBlockManager(plugin));
 
-            plugin.setChatInputManager(new ChatInputManager(plugin));
+            plugin.setChatInputManager(NexusAPI.get().createChatInputManager(plugin));
+            plugin.setChatPrompts(new ChatPrompts(plugin.getChatInputManager(), plugin.getMessages()));
             plugin.setPlayerWarpCategoryRegistry(new PlayerWarpCategoryRegistry(plugin));
             plugin.setPlayerWarpLimits(new PlayerWarpLimits(plugin));
             plugin.setPlayerWarpWhitelistManager(new PlayerWarpWhitelistManager(plugin));
@@ -350,7 +357,7 @@ public class StartupService {
             history.startPurge();
             plugin.setHistoryManager(history);
 
-            plugin.setMenuManager(new MenuManager(plugin));
+            plugin.setMenuManager(NexusAPI.get().createMenuManager(plugin));
 
             LastLocationManager lastLocations = new LastLocationManager(plugin);
             lastLocations.startAutoSave();
@@ -368,11 +375,9 @@ public class StartupService {
         }
     }
 
-    private void register(CommandManager manager, Command command) {
-        manager.register(command);
-        plugin.getCommandRegistry().track(command.getName(), command.aliases());
-    }
-
+    /**
+     * Registers the core listeners.
+     */
     public void registerCoreListeners() {
         PluginManager pluginManager = Bukkit.getPluginManager();
 
@@ -381,9 +386,11 @@ public class StartupService {
         pluginManager.registerEvents(new QuitListener(plugin), plugin);
         pluginManager.registerEvents(new RespawnListener(plugin), plugin);
         pluginManager.registerEvents(new BedRespawnListener(plugin), plugin);
-        pluginManager.registerEvents(new org.glstudio.teleports.modules.listener.ChatInputListener(plugin), plugin);
     }
 
+    /**
+     * Registers the multi server listeners.
+     */
     public void registerMultiServerListeners() {
         PluginManager pluginManager = Bukkit.getPluginManager();
 
@@ -396,45 +403,45 @@ public class StartupService {
         try {
             CommandManager manager = plugin.getCommandManager();
 
-            register(manager, new GLTeleportsCommand(manager, "glteleports", Permissions.ADMIN_RELOAD, plugin));
+            manager.register(new GLTeleportsCommand(manager, "glteleports", Permissions.ADMIN_RELOAD, plugin));
 
-            register(manager, new SetHomeCommand(manager, "sethome", Permissions.HOME_SET, plugin));
-            register(manager, new HomeCommand(manager, "home", Permissions.HOME_USE, plugin));
-            register(manager, new DelHomeCommand(manager, "delhome", Permissions.HOME_DELETE, plugin));
+            manager.register(new SetHomeCommand(manager, "sethome", Permissions.HOME_SET, plugin));
+            manager.register(new HomeCommand(manager, "home", Permissions.HOME_USE, plugin));
+            manager.register(new DelHomeCommand(manager, "delhome", Permissions.HOME_DELETE, plugin));
 
-            register(manager, new ListHomesCommand(manager, "listhomes", Permissions.HOME_LIST, plugin));
-            register(manager, new RenameHomeCommand(manager, "renamehome", Permissions.HOME_SET, plugin));
-            register(manager, new MoveHomeCommand(manager, "movehome", Permissions.HOME_SET, plugin));
-            register(manager, new HomesCommand(manager, "homes", Permissions.HOME_LIST, plugin));
+            manager.register(new ListHomesCommand(manager, "listhomes", Permissions.HOME_LIST, plugin));
+            manager.register(new RenameHomeCommand(manager, "renamehome", Permissions.HOME_SET, plugin));
+            manager.register(new MoveHomeCommand(manager, "movehome", Permissions.HOME_SET, plugin));
+            manager.register(new HomesCommand(manager, "homes", Permissions.HOME_LIST, plugin));
 
-            register(manager, new HomeInviteCommand(manager, "homeinvite", Permissions.HOME_SHARE, plugin));
-            register(manager, new HomeUninviteCommand(manager, "homeuninvite", Permissions.HOME_SHARE, plugin));
-            register(manager, new HomeInvitesCommand(manager, "homeinvites", Permissions.HOME_SHARE, plugin));
+            manager.register(new HomeInviteCommand(manager, "homeinvite", Permissions.HOME_SHARE, plugin));
+            manager.register(new HomeUninviteCommand(manager, "homeuninvite", Permissions.HOME_SHARE, plugin));
+            manager.register(new HomeInvitesCommand(manager, "homeinvites", Permissions.HOME_SHARE, plugin));
 
-            register(manager, new TpaCommand(manager, "tpa", Permissions.TPA_SEND, plugin));
-            register(manager, new TpaHereCommand(manager, "tpahere", Permissions.TPA_HERE, plugin));
-            register(manager, new TpAcceptCommand(manager, "tpaccept", Permissions.TPA_ACCEPT, plugin));
-            register(manager, new TpDenyCommand(manager, "tpdeny", Permissions.TPA_DENY, plugin));
-            register(manager, new TpaCancelCommand(manager, "tpacancel", Permissions.TPA_CANCEL, plugin));
-            register(manager, new TpaToggleCommand(manager, "tpatoggle", Permissions.TPA_TOGGLE, plugin));
-            register(manager, new TpaBlockCommand(manager, "tpablock", Permissions.TPA_BLOCK, plugin));
+            manager.register(new TpaCommand(manager, "tpa", Permissions.TPA_SEND, plugin));
+            manager.register(new TpaHereCommand(manager, "tpahere", Permissions.TPA_HERE, plugin));
+            manager.register(new TpAcceptCommand(manager, "tpaccept", Permissions.TPA_ACCEPT, plugin));
+            manager.register(new TpDenyCommand(manager, "tpdeny", Permissions.TPA_DENY, plugin));
+            manager.register(new TpaCancelCommand(manager, "tpacancel", Permissions.TPA_CANCEL, plugin));
+            manager.register(new TpaToggleCommand(manager, "tpatoggle", Permissions.TPA_TOGGLE, plugin));
+            manager.register(new TpaBlockCommand(manager, "tpablock", Permissions.TPA_BLOCK, plugin));
 
-            register(manager, new SetWarpCommand(manager, "setwarp", Permissions.WARP_SET, plugin));
-            register(manager, new WarpCommand(manager, "warp", Permissions.WARP_USE, plugin));
-            register(manager, new WarpsCommand(manager, "warps", Permissions.WARP_LIST, plugin));
-            register(manager, new DelWarpCommand(manager, "delwarp", Permissions.WARP_DELETE, plugin));
-            register(manager, new EditWarpCommand(manager, "editwarp", Permissions.WARP_SET, plugin));
+            manager.register(new SetWarpCommand(manager, "setwarp", Permissions.WARP_SET, plugin));
+            manager.register(new WarpCommand(manager, "warp", Permissions.WARP_USE, plugin));
+            manager.register(new WarpsCommand(manager, "warps", Permissions.WARP_LIST, plugin));
+            manager.register(new DelWarpCommand(manager, "delwarp", Permissions.WARP_DELETE, plugin));
+            manager.register(new EditWarpCommand(manager, "editwarp", Permissions.WARP_SET, plugin));
 
-            register(manager, new SetSpawnCommand(manager, "setspawn", Permissions.SPAWN_SET, plugin));
-            register(manager, new SpawnCommand(manager, "spawn", Permissions.SPAWN_USE, plugin));
+            manager.register(new SetSpawnCommand(manager, "setspawn", Permissions.SPAWN_SET, plugin));
+            manager.register(new SpawnCommand(manager, "spawn", Permissions.SPAWN_USE, plugin));
 
-            register(manager, new org.glstudio.teleports.modules.command.playerwarp.PlayerWarpCommand(
+            manager.register(new org.glstudio.teleports.modules.command.playerwarp.PlayerWarpCommand(
                     manager, "pw", Permissions.PLAYERWARP_USE, plugin));
 
-            register(manager, new org.glstudio.teleports.modules.command.back.BackCommand(
+            manager.register(new org.glstudio.teleports.modules.command.back.BackCommand(
                     manager, "back", Permissions.BACK_USE, plugin));
 
-            register(manager, new TpOfflineCommand(manager, "tpoffline", Permissions.ADMIN_TPOFFLINE, plugin));
+            manager.register(new TpOfflineCommand(manager, "tpoffline", Permissions.ADMIN_TPOFFLINE, plugin));
 
             LoggerUtils.logSuccess("Commands registered.");
             return true;
@@ -450,17 +457,11 @@ public class StartupService {
     }
 
     private void registerPlaceholders() {
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) {
-            return;
-        }
-
-        try {
-            new TeleportsExpansion(plugin).register();
-            LoggerUtils.logSuccess("PlaceholderAPI expansion registered.");
-        } catch (Throwable e) {
-            LoggerUtils.logWarn("PlaceholderAPI is installed but the expansion could not register: "
-                    + e.getMessage());
-        }
+        PlaceholderHooks.registerIfPresent(() -> {
+            TeleportsExpansion expansion = new TeleportsExpansion(plugin);
+            plugin.setPlaceholderExpansion(expansion);
+            return expansion;
+        });
     }
 
     private boolean registerListeners() {

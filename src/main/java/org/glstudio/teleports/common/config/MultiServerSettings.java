@@ -1,6 +1,7 @@
 package org.glstudio.teleports.common.config;
 
 import lombok.Getter;
+import org.glstudio.nexus.network.NetworkSettings;
 import org.glstudio.nexus.utils.ConfigFile;
 import org.glstudio.teleports.common.storage.redis.RedisChannels;
 
@@ -8,13 +9,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+/**
+ * The {@code multi-server} section of {@code config.yml}, under its current or its old key names.
+ */
 @Getter
 public class MultiServerSettings {
-    private static final Pattern ENV_PATTERN = Pattern.compile("\\$\\{([A-Za-z_][A-Za-z0-9_]*)}");
-
     private static final Set<String> LEGACY_KEYS_SEEN = ConcurrentHashMap.newKeySet();
 
     private final boolean enabled;
@@ -36,22 +36,27 @@ public class MultiServerSettings {
 
     private final int pendingExpirySeconds;
 
+    private final NetworkSettings network;
+
+    /**
+     * Creates the multi server settings.
+     */
     public MultiServerSettings(ConfigFile config) {
         this.enabled = getBoolean(config, "multi-server.enabled", "MULTI_SERVER.ENABLED");
-        this.serverName = orDefault(resolve(getString(config, "multi-server.server-name",
+        this.serverName = orDefault(NetworkSettings.resolveEnv(getString(config, "multi-server.server-name",
                 "MULTI_SERVER.SERVER_NAME")), "unnamed-server");
         this.instanceId = UUID.randomUUID().toString();
 
         this.channel = orDefault(getString(config, "multi-server.redis.channel",
                 "MULTI_SERVER.REDIS.CHANNEL"), RedisChannels.TELEPORTS);
-        this.redisHost = orDefault(resolve(getString(config, "multi-server.redis.host",
+        this.redisHost = orDefault(NetworkSettings.resolveEnv(getString(config, "multi-server.redis.host",
                 "MULTI_SERVER.REDIS.HOST")), "localhost");
         this.redisPort = getInt(config, "multi-server.redis.port", "MULTI_SERVER.REDIS.PORT", 6379);
-        this.redisPassword = resolve(getString(config, "multi-server.redis.password",
+        this.redisPassword = NetworkSettings.resolveEnv(getString(config, "multi-server.redis.password",
                 "MULTI_SERVER.REDIS.PASSWORD"));
         this.redisAllowInsecure = getBoolean(config, "multi-server.redis.allow-insecure",
                 "MULTI_SERVER.REDIS.ALLOW_INSECURE");
-        this.secret = resolve(getString(config, "multi-server.secret", "MULTI_SERVER.SECRET"));
+        this.secret = NetworkSettings.resolveEnv(getString(config, "multi-server.secret", "MULTI_SERVER.SECRET"));
 
         this.retryAttempts = Math.max(1, getInt(config, "multi-server.retry.attempts",
                 "MULTI_SERVER.RETRY.ATTEMPTS", 3));
@@ -64,16 +69,28 @@ public class MultiServerSettings {
         int configuredExpiry = Math.max(5, getInt(config, "multi-server.pending-expiry-seconds",
                 "MULTI_SERVER.PENDING_EXPIRY_SECONDS", 120));
         this.pendingExpirySeconds = Math.max(configuredExpiry, (arrivalDelayTicks / 20) + 5);
+
+        this.network = new NetworkSettings(enabled, serverName, instanceId, channel, redisHost, redisPort,
+                redisPassword, redisAllowInsecure, secret, retryAttempts, retryBackoffMs);
     }
 
+    /**
+     * Returns the pending expiry millis.
+     */
     public long getPendingExpiryMillis() {
         return pendingExpirySeconds * 1000L;
     }
 
+    /**
+     * Tells whether a server name means this server.
+     */
     public boolean isLocalServer(String server) {
         return server == null || server.isBlank() || server.equalsIgnoreCase(serverName);
     }
 
+    /**
+     * Tells whether something a reload cannot apply has changed.
+     */
     public boolean differsFrom(MultiServerSettings other) {
         return enabled != other.enabled
                 || redisPort != other.redisPort
@@ -98,6 +115,9 @@ public class MultiServerSettings {
         return true;
     }
 
+    /**
+     * Lists the old key names in use.
+     */
     public static Set<String> legacyKeysSeen() {
         return Set.copyOf(LEGACY_KEYS_SEEN);
     }
@@ -119,19 +139,5 @@ public class MultiServerSettings {
 
     private static String orDefault(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
-    }
-
-    static String resolve(String value) {
-        if (value == null || value.indexOf('$') < 0) {
-            return value;
-        }
-        Matcher matcher = ENV_PATTERN.matcher(value);
-        StringBuilder out = new StringBuilder();
-        while (matcher.find()) {
-            String env = System.getenv(matcher.group(1));
-            matcher.appendReplacement(out, Matcher.quoteReplacement(env == null ? "" : env));
-        }
-        matcher.appendTail(out);
-        return out.toString();
     }
 }

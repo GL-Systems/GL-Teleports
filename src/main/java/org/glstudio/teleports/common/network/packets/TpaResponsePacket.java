@@ -9,6 +9,9 @@ import org.glstudio.teleports.modules.model.TpaRequest;
 
 import java.util.UUID;
 
+/**
+ * The answer to a teleport request.
+ */
 @Getter
 public class TpaResponsePacket extends Packet {
     private final UUID id;
@@ -36,6 +39,9 @@ public class TpaResponsePacket extends Packet {
 
     private final long timestamp;
 
+    /**
+     * Creates the packet.
+     */
     public TpaResponsePacket(UUID id, String sourceInstance, String handlerServer, TpaResponse response,
                              UUID requesterUuid, String requesterName, UUID targetUuid,
                              String targetName, String targetServer, TpaRequest.TpaType tpaType,
@@ -61,6 +67,9 @@ public class TpaResponsePacket extends Packet {
         this.timestamp = System.currentTimeMillis();
     }
 
+    /**
+     * Returns where this leads.
+     */
     public RemoteDestination toDestination() {
         return new RemoteDestination(targetServer, world, x, y, z, yaw, pitch);
     }

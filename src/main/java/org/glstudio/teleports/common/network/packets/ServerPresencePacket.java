@@ -4,12 +4,18 @@ import lombok.Getter;
 import org.glstudio.teleports.common.network.Packet;
 import org.glstudio.teleports.common.network.PacketType;
 
+/**
+ * Tells the other servers that this one went online or offline.
+ */
 @Getter
 public class ServerPresencePacket extends Packet {
     private final String sourceServer;
     private final String sourceInstance;
     private final boolean online;
 
+    /**
+     * Creates the packet.
+     */
     public ServerPresencePacket(String sourceServer, String sourceInstance, boolean online) {
         this.sourceServer = sourceServer;
         this.sourceInstance = sourceInstance;

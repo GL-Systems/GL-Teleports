@@ -8,9 +8,15 @@ import org.glstudio.teleports.GTeleports;
 
 import java.util.List;
 
+/**
+ * The {@code /back} command.
+ */
 public class BackCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public BackCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;

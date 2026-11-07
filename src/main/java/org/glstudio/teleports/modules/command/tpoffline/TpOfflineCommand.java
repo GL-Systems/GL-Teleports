@@ -4,10 +4,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.command.home.HomeAdmin;
 import org.glstudio.teleports.modules.model.PlayerRef;
 import org.glstudio.teleports.modules.model.StoredLocation;
@@ -26,6 +26,9 @@ import java.util.concurrent.CompletableFuture;
 public class TpOfflineCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public TpOfflineCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;
@@ -71,7 +74,7 @@ public class TpOfflineCommand extends Command {
             return;
         }
 
-        Failures.guard(plugin, HomeAdmin.resolve(plugin, name).thenCompose(target -> {
+        Futures.guard(HomeAdmin.resolve(plugin, name).thenCompose(target -> {
             if (target == null) {
                 plugin.getMessages().send(player, "errors.player-never-played", "{player}", name);
                 return CompletableFuture.completedFuture(null);

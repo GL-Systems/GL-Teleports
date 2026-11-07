@@ -6,17 +6,18 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.IllegalPluginAccessException;
+import org.glstudio.nexus.proxy.ProxyMessenger;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.api.Events;
 import org.glstudio.teleports.api.event.CrossServerTransferEvent;
+import org.glstudio.teleports.common.config.MultiServerSettings;
 import org.glstudio.teleports.common.network.PacketHandler;
 import org.glstudio.teleports.common.network.packets.CacheInvalidatePacket;
 import org.glstudio.teleports.common.network.packets.InvalidationScope;
 import org.glstudio.teleports.common.network.packets.ServerPresencePacket;
 import org.glstudio.teleports.common.network.packets.TeleportRequestPacket;
 import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
-import org.glstudio.teleports.common.config.MultiServerSettings;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.model.DestinationLock;
 import org.glstudio.teleports.modules.model.Home;
@@ -24,7 +25,6 @@ import org.glstudio.teleports.modules.model.PendingTeleport;
 import org.glstudio.teleports.modules.model.TeleportDestination;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.glstudio.teleports.modules.model.Warp;
-import org.glstudio.teleports.modules.transfer.PlayerTransferService;
 
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +34,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Carries out teleports between servers.
+ */
 @Getter
 public class CrossServerManager {
     private static final long TRANSFER_CHECK_TICKS = 100L;
@@ -50,7 +53,7 @@ public class CrossServerManager {
     private final MultiServerSettings settings;
 
     private volatile PacketHandler packetHandler;
-    private volatile PlayerTransferService transferService;
+    private volatile ProxyMessenger transferService;
     private volatile PlayerRegistry playerRegistry;
 
     private final Map<UUID, PendingTeleport> pendingTeleports = new ConcurrentHashMap<>();
@@ -59,8 +62,11 @@ public class CrossServerManager {
 
     private final Map<UUID, ScheduledFuture<?>> pendingStores = new ConcurrentHashMap<>();
 
+    /**
+     * Creates the manager.
+     */
     public CrossServerManager(GTeleports plugin, MultiServerSettings settings,
-                              PacketHandler packetHandler, PlayerTransferService transferService,
+                              PacketHandler packetHandler, ProxyMessenger transferService,
                               PlayerRegistry playerRegistry) {
         this.plugin = plugin;
         this.settings = settings;
@@ -69,34 +75,55 @@ public class CrossServerManager {
         this.playerRegistry = playerRegistry;
     }
 
-    public void attach(PacketHandler packetHandler, PlayerTransferService transferService,
+    /**
+     * Starts using the network pieces once they exist.
+     */
+    public void attach(PacketHandler packetHandler, ProxyMessenger transferService,
                        PlayerRegistry playerRegistry) {
         this.transferService = transferService;
         this.playerRegistry = playerRegistry;
         this.packetHandler = packetHandler;
     }
 
+    /**
+     * Returns this server's name.
+     */
     public String currentServer() {
         return settings.getServerName();
     }
 
+    /**
+     * Tells whether this feature is on.
+     */
     public boolean isEnabled() {
         return settings.isEnabled() && packetHandler != null && transferService != null
                 && playerRegistry != null;
     }
 
+    /**
+     * Tells whether a server name means this server.
+     */
     public boolean isLocal(String server) {
         return settings.isLocalServer(server);
     }
 
+    /**
+     * Tells whether a server can be reached.
+     */
     public boolean canReach(String server) {
         return isLocal(server) || isEnabled();
     }
 
+    /**
+     * Sends the to.
+     */
     public void sendTo(Player player, TeleportType type, TeleportDestination destination) {
         sendTo(player, type, destination, false);
     }
 
+    /**
+     * Sends the to.
+     */
     public void sendTo(Player player, TeleportType type, TeleportDestination destination, boolean instant) {
         String targetServer = destination.getServer();
 
@@ -159,7 +186,7 @@ public class CrossServerManager {
                     return;
                 }
 
-                if (!transferService.transfer(player, targetServer)) {
+                if (!transferService.connect(player, targetServer)) {
                     abandonTransfer(player, type);
                     return;
                 }
@@ -205,6 +232,9 @@ public class CrossServerManager {
         plugin.getTeleportManager().refund(player, type);
     }
 
+    /**
+     * Broadcasts the invalidation.
+     */
     public void broadcastInvalidation(InvalidationScope scope, UUID owner) {
         if (!isEnabled()) {
             return;
@@ -218,6 +248,9 @@ public class CrossServerManager {
         });
     }
 
+    /**
+     * Tells the other servers whether this one is online.
+     */
     public CompletableFuture<Void> announcePresence(boolean online) {
         if (!isEnabled()) {
             return CompletableFuture.completedFuture(null);
@@ -232,6 +265,9 @@ public class CrossServerManager {
         });
     }
 
+    /**
+     * Records that a server went online or offline.
+     */
     public void handlePresence(ServerPresencePacket packet) {
         if (playerRegistry == null || packet.getSourceServer() == null) {
             return;
@@ -240,6 +276,9 @@ public class CrossServerManager {
         playerRegistry.markServer(packet.getSourceServer(), packet.isOnline());
     }
 
+    /**
+     * Drops the cached data a packet names.
+     */
     public void handleInvalidation(CacheInvalidatePacket packet) {
         switch (packet.getScope()) {
             case HOME -> {
@@ -275,6 +314,9 @@ public class CrossServerManager {
         }
     }
 
+    /**
+     * Acts on a teleport another server asked for.
+     */
     public void handleIncoming(TeleportRequestPacket packet) {
         UUID uuid = packet.getPlayerUuid();
         PendingTeleport pending = packet.toPendingTeleport(
@@ -315,6 +357,9 @@ public class CrossServerManager {
         ChunkPreloader.prepare(plugin, raw);
     }
 
+    /**
+     * Returns where a player arriving now should appear.
+     */
     public Location placeAtLogin(Player player) {
         UUID uuid = player.getUniqueId();
         PendingTeleport pending = pendingTeleports.get(uuid);
@@ -351,6 +396,9 @@ public class CrossServerManager {
         return plugin.getTeleportSafetyManager().resolve(player, raw, pending.getType());
     }
 
+    /**
+     * Finishes a teleport once the player is here.
+     */
     public void handleArrival(Player player) {
         purgeExpired();
 
@@ -433,6 +481,9 @@ public class CrossServerManager {
         }
     }
 
+    /**
+     * Forgets what is held for a player.
+     */
     public void forget(UUID uuid) {
         pendingTeleports.remove(uuid);
         arrivalsPending.remove(uuid);
@@ -587,6 +638,9 @@ public class CrossServerManager {
                 pending.isExpired() && !pending.isPlacedAtLogin());
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         pendingStores.values().forEach(scheduled -> scheduled.cancel(false));
         pendingStores.clear();

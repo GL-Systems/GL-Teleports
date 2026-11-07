@@ -38,6 +38,14 @@ public class WarpCreateEvent extends PlayerEvent implements Cancellable {
     @Setter
     private String cancelMessage;
 
+    /**
+     * Creates the event.
+     *
+     * @param player the player
+     * @param name the name
+     * @param location the location
+     * @param overwrite the overwrite
+     */
     public WarpCreateEvent(Player player, String name, Location location, boolean overwrite) {
         super(player);
         this.name = name;
@@ -60,6 +68,11 @@ public class WarpCreateEvent extends PlayerEvent implements Cancellable {
         return HANDLERS;
     }
 
+    /**
+     * Returns the handler list of this event.
+     *
+     * @return the handler list
+     */
     public static HandlerList getHandlerList() {
         return HANDLERS;
     }

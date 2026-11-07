@@ -12,15 +12,24 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Holds the categories of player warps.
+ */
 public class PlayerWarpCategoryRegistry {
     private final GTeleports plugin;
     private volatile Map<String, PlayerWarpCategory> categories = Map.of();
 
+    /**
+     * Creates the registry.
+     */
     public PlayerWarpCategoryRegistry(GTeleports plugin) {
         this.plugin = plugin;
         load();
     }
 
+    /**
+     * Loads the data.
+     */
     public void load() {
         ConfigFile config = plugin.getConfigManager().getPlayerWarpsConfig();
         ConfigurationSection section = config.getConfigurationSection("categories");
@@ -42,14 +51,23 @@ public class PlayerWarpCategoryRegistry {
         this.categories = loaded;
     }
 
+    /**
+     * Finds a category.
+     */
     public PlayerWarpCategory get(String id) {
         return id == null ? null : categories.get(id.toLowerCase(Locale.ROOT));
     }
 
+    /**
+     * Tells whether a category exists.
+     */
     public boolean exists(String id) {
         return get(id) != null;
     }
 
+    /**
+     * Returns every category.
+     */
     public List<PlayerWarpCategory> all() {
         List<PlayerWarpCategory> list = new ArrayList<>(categories.values());
         list.sort(Comparator.comparingInt(PlayerWarpCategory::slot));

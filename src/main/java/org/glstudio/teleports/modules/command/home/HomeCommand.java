@@ -1,20 +1,26 @@
 package org.glstudio.teleports.modules.command.home;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
-import org.glstudio.teleports.modules.model.Home;
-import org.glstudio.nexus.modules.command.Command;
-import org.glstudio.nexus.modules.command.CommandManager;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
+import org.glstudio.nexus.modules.command.Command;
+import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.modules.model.Home;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * The {@code /home} command.
+ */
 public class HomeCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public HomeCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;
@@ -69,7 +75,7 @@ public class HomeCommand extends Command {
     }
 
     private void openOthersHome(Player player, HomeAdmin.Target target) {
-        Failures.guard(plugin, HomeAdmin.resolve(plugin, target.playerName()).thenAccept(owner ->
+        Futures.guard(HomeAdmin.resolve(plugin, target.playerName()).thenAccept(owner ->
                 plugin.getServer().getScheduler().runTask(plugin, () -> {
                     if (!player.isOnline()) {
                         return;

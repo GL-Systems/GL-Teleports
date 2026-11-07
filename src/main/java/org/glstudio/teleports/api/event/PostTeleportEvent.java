@@ -38,6 +38,16 @@ public class PostTeleportEvent extends TeleportEvent {
     /** Whether the player arrived here from another server; read with {@code isCrossServer()}. */
     private final boolean crossServer;
 
+    /**
+     * Creates the event.
+     *
+     * @param player the player
+     * @param type the type
+     * @param origin the origin
+     * @param destination the destination
+     * @param destinationName the destination name
+     * @param crossServer the cross server
+     */
     public PostTeleportEvent(Player player, TeleportType type, Location origin, Location destination,
                              String destinationName, boolean crossServer) {
         super(player, type);
@@ -52,6 +62,11 @@ public class PostTeleportEvent extends TeleportEvent {
         return HANDLERS;
     }
 
+    /**
+     * Returns the handler list of this event.
+     *
+     * @return the handler list
+     */
     public static HandlerList getHandlerList() {
         return HANDLERS;
     }

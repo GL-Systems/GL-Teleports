@@ -12,8 +12,22 @@ import java.util.stream.Collectors;
 
 /** The kinds of destinations a single migration run may write. */
 public record MigrationSelection(Set<Kind> kinds) {
+    /**
+     * What can be selected.
+     */
     public enum Kind {
-        HOMES("homes"), WARPS("warps"), PLAYER_WARPS("playerwarps");
+        /**
+         * Homes.
+         */
+        HOMES("homes"),
+        /**
+         * Warps.
+         */
+        WARPS("warps"),
+        /**
+         * Player warps.
+         */
+        PLAYER_WARPS("playerwarps");
 
         private final String key;
 
@@ -22,6 +36,7 @@ public record MigrationSelection(Set<Kind> kinds) {
         }
     }
 
+    /** Creates the selection, copying what it holds. */
     public MigrationSelection {
         kinds = Set.copyOf(kinds);
         if (kinds.isEmpty()) {
@@ -29,10 +44,16 @@ public record MigrationSelection(Set<Kind> kinds) {
         }
     }
 
+    /**
+     * Selects everything.
+     */
     public static MigrationSelection all() {
         return new MigrationSelection(EnumSet.allOf(Kind.class));
     }
 
+    /**
+     * Reads a value from its text.
+     */
     public static MigrationSelection parse(String value) {
         if (value == null || value.equalsIgnoreCase("all")) {
             return all();
@@ -51,15 +72,24 @@ public record MigrationSelection(Set<Kind> kinds) {
         return selected.isEmpty() ? null : new MigrationSelection(selected);
     }
 
+    /**
+     * Tells whether a kind is selected.
+     */
     public boolean includes(Kind kind) {
         return kinds.contains(kind);
     }
 
+    /**
+     * Returns the name of this selection.
+     */
     public String key() {
         return kinds.size() == Kind.values().length ? "all" : Arrays.stream(Kind.values())
                 .filter(kinds::contains).map(kind -> kind.key).collect(Collectors.joining(","));
     }
 
+    /**
+     * Keeps only what is selected.
+     */
     public MigrationData filter(MigrationData data) {
         return new MigrationData(data.storage(), data.localServer(),
                 includes(Kind.HOMES) ? data.homes() : List.of(),

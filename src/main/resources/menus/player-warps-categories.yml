@@ -1,3 +1,5 @@
+config-version: 1
+
 # Category grid. Used both to browse warps by category and, when opened from a warp's manage
 # screen, to assign a category to that warp - the click action changes, the layout does not.
 #

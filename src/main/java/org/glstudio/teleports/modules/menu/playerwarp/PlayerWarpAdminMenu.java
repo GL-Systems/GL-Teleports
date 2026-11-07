@@ -2,14 +2,14 @@ package org.glstudio.teleports.modules.menu.playerwarp;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.glstudio.nexus.utils.CC;
-import org.glstudio.nexus.utils.ConfigFile;
-import org.glstudio.teleports.GTeleports;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.menu.button.Button;
 import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
-import org.glstudio.teleports.modules.menu.ButtonPresets;
+import org.glstudio.nexus.modules.menu.button.ButtonPresets;
+import org.glstudio.nexus.modules.menu.config.MenuConfig;
 import org.glstudio.nexus.modules.menu.paginated.PaginatedMenu;
-import org.glstudio.teleports.core.util.Failures;
+import org.glstudio.nexus.utils.CC;
+import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.menu.MenuItems;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 
@@ -18,24 +18,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Menu with the staff options of a player warp.
+ */
 public class PlayerWarpAdminMenu extends PaginatedMenu<Button> {
     private final GTeleports plugin;
 
     private volatile List<PlayerWarp> warps;
     private volatile boolean loading = true;
 
+    /**
+     * Creates the menu.
+     */
     public PlayerWarpAdminMenu(GTeleports plugin, Player viewer) {
         super(plugin.getMenuManager(), viewer,
-                CC.t(MenuItems.string(plugin.getConfigManager().getPlayerWarpsAdminMenu(),
-                        "title", "&8Player Warps - Admin")),
-                MenuItems.integer(plugin.getConfigManager().getPlayerWarpsAdminMenu(), "size", 54));
+                CC.t(new MenuConfig(plugin.getConfigManager().getPlayerWarpsAdminMenu()).string("title", "&8Player Warps - Admin")),
+                new MenuConfig(plugin.getConfigManager().getPlayerWarpsAdminMenu()).integer("size", 54));
         this.plugin = plugin;
         setAutoRefresh(true);
         load();
     }
 
     private void load() {
-        Failures.log(plugin.getPlayerWarpManager().getWarps().thenAccept(all -> {
+        Futures.log(plugin.getPlayerWarpManager().getWarps().thenAccept(all -> {
             warps = new ArrayList<>(all);
             warps.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
             loading = false;
@@ -50,7 +55,7 @@ public class PlayerWarpAdminMenu extends PaginatedMenu<Button> {
 
     @Override
     protected List<Integer> getContentSlots() {
-        return MenuItems.intList(plugin.getConfigManager().getPlayerWarpsAdminMenu(), "content-slots");
+        return new MenuConfig(plugin.getConfigManager().getPlayerWarpsAdminMenu()).intList("content-slots");
     }
 
     @Override
@@ -60,7 +65,7 @@ public class PlayerWarpAdminMenu extends PaginatedMenu<Button> {
             return List.of();
         }
 
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsAdminMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsAdminMenu());
         List<Button> items = new ArrayList<>(current.size());
 
         for (PlayerWarp warp : current) {
@@ -70,9 +75,9 @@ public class PlayerWarpAdminMenu extends PaginatedMenu<Button> {
                     "%world%", warp.getWorld() == null ? "?" : warp.getWorld()
             };
 
-            ButtonBuilder builder = MenuItems.builder(cfg, "items.warp");
-            builder.name(MenuItems.apply(MenuItems.name(cfg, "items.warp", "&a%name%"), placeholders));
-            builder.lore(MenuItems.apply(MenuItems.lore(cfg, "items.warp"), placeholders));
+            ButtonBuilder builder = cfg.builder("items.warp");
+            builder.name(MenuItems.apply(cfg.name("items.warp", "&a%name%"), placeholders));
+            builder.lore(MenuItems.apply(cfg.lore("items.warp"), placeholders));
             builder.onClickSimple(() -> new PlayerWarpManageMenu(plugin, viewer, warp).open());
 
             items.add(builder.build());
@@ -89,42 +94,42 @@ public class PlayerWarpAdminMenu extends PaginatedMenu<Button> {
     @Override
     protected Button getEmptyButton(Player viewer) {
         if (loading) {
-            return ButtonPresets.loading();
+            return ButtonPresets.loading("&eLoading...", "&7Please wait");
         }
-        return MenuItems.builder(plugin.getConfigManager().getPlayerWarpsAdminMenu(), "items.empty").build();
+        return new MenuConfig(plugin.getConfigManager().getPlayerWarpsAdminMenu()).builder("items.empty").build();
     }
 
     @Override
     protected int getEmptySlot(Player viewer) {
-        return MenuItems.slot(plugin.getConfigManager().getPlayerWarpsAdminMenu(), "items.empty");
+        return new MenuConfig(plugin.getConfigManager().getPlayerWarpsAdminMenu()).slot("items.empty");
     }
 
     @Override
     protected Map<Integer, Button> getStaticButtons(Player viewer, int currentPage, int maxPage) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsAdminMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsAdminMenu());
         Map<Integer, Button> buttons = new HashMap<>();
 
-        int infoSlot = MenuItems.slot(cfg, "items.info");
+        int infoSlot = cfg.slot("items.info");
         if (infoSlot >= 0) {
             int count = warps == null ? 0 : warps.size();
-            ButtonBuilder info = MenuItems.builder(cfg, "items.info");
-            info.lore(MenuItems.apply(MenuItems.lore(cfg, "items.info"), "%count%", count));
+            ButtonBuilder info = cfg.builder("items.info");
+            info.lore(MenuItems.apply(cfg.lore("items.info"), "%count%", count));
             buttons.put(infoSlot, info.build());
         }
 
         if (currentPage > 0) {
-            MenuItems.put(buttons, cfg, "items.previous-page", this::previousPage);
+            cfg.put(buttons, "items.previous-page", this::previousPage);
         }
         if (currentPage < maxPage) {
-            MenuItems.put(buttons, cfg, "items.next-page", this::nextPage);
+            cfg.put(buttons, "items.next-page", this::nextPage);
         }
 
-        MenuItems.put(buttons, cfg, "items.purge", () -> {
+        cfg.put(buttons, "items.purge", () -> {
             plugin.getPlayerWarpPurgeService().purgeNow();
             plugin.getMessages().send(viewer, "reload.success");
         });
 
-        MenuItems.put(buttons, cfg, "items.reload", () -> {
+        cfg.put(buttons, "items.reload", () -> {
             plugin.getConfigManager().getPlayerWarpsConfig().reload();
             plugin.getConfigManager().reload();
             plugin.getPlayerWarpCategoryRegistry().load();
@@ -133,9 +138,9 @@ public class PlayerWarpAdminMenu extends PaginatedMenu<Button> {
             load();
         });
 
-        MenuItems.put(buttons, cfg, "items.close", viewer::closeInventory);
+        cfg.put(buttons, "items.close", viewer::closeInventory);
 
-        MenuItems.putExtras(buttons, cfg, "extra");
+        cfg.putExtras(buttons, "extra");
 
         return buttons;
     }

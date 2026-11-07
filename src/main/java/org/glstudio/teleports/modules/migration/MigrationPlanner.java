@@ -38,11 +38,17 @@ public class MigrationPlanner {
     private final MigrationOptions options;
     private final WorldDirectory worlds;
 
+    /**
+     * Creates the migration planner.
+     */
     public MigrationPlanner(MigrationOptions options, WorldDirectory worlds) {
         this.options = options;
         this.worlds = worlds;
     }
 
+    /**
+     * Works out what to import.
+     */
     public MigrationPlan plan(MigrationData data, Map<UUID, List<Home>> existingHomes, List<Warp> existingWarps)
             throws MigrationException {
         return plan(data, existingHomes, existingWarps, List.of(), Set.of(), Set.of());

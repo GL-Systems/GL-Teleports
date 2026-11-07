@@ -5,6 +5,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.api.Events;
 import org.glstudio.teleports.api.event.TpaRequestEvent;
@@ -13,7 +14,6 @@ import org.glstudio.teleports.common.network.packets.TpaResponse;
 import org.glstudio.teleports.common.network.packets.TpaResponsePacket;
 import org.glstudio.teleports.common.network.packets.TpaTravelPacket;
 import org.glstudio.teleports.common.storage.redis.NetworkPlayer;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.glstudio.teleports.modules.model.TpaRequest;
 
@@ -25,6 +25,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+/**
+ * Runs teleport requests between players.
+ */
 public class TpaManager {
     private final GTeleports plugin;
     private final Map<UUID, Queue<TpaRequest>> pendingRequests = new ConcurrentHashMap<>();
@@ -33,6 +36,9 @@ public class TpaManager {
 
     private final TpaRequestStore store;
 
+    /**
+     * Creates the manager.
+     */
     public TpaManager(GTeleports plugin) {
         this.plugin = plugin;
         this.store = new TpaRequestStore(plugin);
@@ -49,6 +55,9 @@ public class TpaManager {
         return !Events.callAndExplain(event, requester, event.getCancelMessage());
     }
 
+    /**
+     * Sends the request.
+     */
     public void sendRequest(Player requester, String targetName, TpaRequest.TpaType type) {
         if (requester.getName().equalsIgnoreCase(targetName)) {
             plugin.getMessages().send(requester, "errors.cannot-teleport-self");
@@ -68,7 +77,7 @@ public class TpaManager {
         }
 
         UUID requesterId = requester.getUniqueId();
-        Failures.log(crossServer.getPlayerRegistry().lookup(targetName).thenAccept(found ->
+        Futures.log(crossServer.getPlayerRegistry().lookup(targetName).thenAccept(found ->
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     Player stillOnline = Bukkit.getPlayer(requesterId);
                     if (stillOnline == null || !stillOnline.isOnline()) {
@@ -180,6 +189,9 @@ public class TpaManager {
         return false;
     }
 
+    /**
+     * Acts on a request from another server.
+     */
     public void handleRemoteRequest(TpaRequestPacket packet) {
         Bukkit.getScheduler().runTask(plugin, () -> {
             Player target = Bukkit.getPlayer(packet.getTargetUuid());
@@ -214,6 +226,9 @@ public class TpaManager {
         });
     }
 
+    /**
+     * Accepts a request.
+     */
     public void acceptRequest(Player player, String requesterName) {
         TpaRequest request = findPending(player, requesterName);
 
@@ -239,7 +254,7 @@ public class TpaManager {
     }
 
     private void claimThen(Player player, TpaRequest request, Runnable action) {
-        Failures.log(store.claim(request.getId()).thenAccept(won ->
+        Futures.log(store.claim(request.getId()).thenAccept(won ->
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     if (!player.isOnline()) {
                         return;
@@ -275,6 +290,9 @@ public class TpaManager {
                 });
     }
 
+    /**
+     * Denies a request.
+     */
     public void denyRequest(Player player, String requesterName) {
         TpaRequest request = findPending(player, requesterName);
 
@@ -302,6 +320,9 @@ public class TpaManager {
                 request.getTargetServer(), request.getType(), null);
     }
 
+    /**
+     * Cancels the request.
+     */
     public void cancelRequest(Player player, String targetName) {
         TpaRequest request = findOutgoing(player, targetName);
 
@@ -329,6 +350,9 @@ public class TpaManager {
                 request.getTargetServer(), request.getType(), null);
     }
 
+    /**
+     * Switches receiving requests on or off.
+     */
     public void toggleTpa(Player player) {
         boolean enabled = tpaToggle.getOrDefault(player.getUniqueId(), false);
         tpaToggle.put(player.getUniqueId(), !enabled);
@@ -337,6 +361,9 @@ public class TpaManager {
         plugin.getPlayerSettings().setTpaBlocked(player.getUniqueId(), !enabled);
     }
 
+    /**
+     * Applies the stored toggle.
+     */
     public void applyStoredToggle(UUID uuid, boolean blocked) {
         if (blocked) {
             tpaToggle.put(uuid, true);
@@ -345,6 +372,9 @@ public class TpaManager {
         }
     }
 
+    /**
+     * Acts on an answer from another server.
+     */
     public void handleRemoteResponse(TpaResponsePacket packet) {
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (packet.getResponse() == TpaResponse.CANCELLED) {
@@ -406,6 +436,9 @@ public class TpaManager {
                 });
     }
 
+    /**
+     * Acts on a traveller from another server.
+     */
     public void handleRemoteTravel(TpaTravelPacket packet) {
         Bukkit.getScheduler().runTask(plugin, () -> {
             Player traveller = Bukkit.getPlayer(packet.getTravellerUuid());
@@ -534,6 +567,9 @@ public class TpaManager {
         return null;
     }
 
+    /**
+     * Lists who has asked a player.
+     */
     public List<String> pendingRequesterNames(Player target) {
         Queue<TpaRequest> requests = pendingRequests.get(target.getUniqueId());
         if (requests == null) {
@@ -547,6 +583,9 @@ public class TpaManager {
         return names;
     }
 
+    /**
+     * Lists who a player has asked.
+     */
     public List<String> outgoingTargetNames(Player requester) {
         Queue<TpaRequest> requests = outgoingRequests.get(requester.getUniqueId());
         if (requests == null) {
@@ -589,6 +628,9 @@ public class TpaManager {
         return removed;
     }
 
+    /**
+     * Forgets what is held for a player.
+     */
     public void forget(UUID uuid) {
         Queue<TpaRequest> pending = pendingRequests.remove(uuid);
         if (pending != null) {
@@ -617,6 +659,9 @@ public class TpaManager {
         return plugin.getCrossServerManager().isLocal(server);
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         pendingRequests.values().forEach(queue -> queue.forEach(TpaRequest::cancelExpiry));
         outgoingRequests.values().forEach(queue -> queue.forEach(TpaRequest::cancelExpiry));

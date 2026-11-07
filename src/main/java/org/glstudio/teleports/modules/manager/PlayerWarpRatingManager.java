@@ -1,8 +1,8 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpRating;
@@ -11,13 +11,22 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Holds the ratings of player warps.
+ */
 public class PlayerWarpRatingManager {
     private final GTeleports plugin;
 
+    /**
+     * Creates the manager.
+     */
     public PlayerWarpRatingManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Lists the ratings of a warp.
+     */
     public CompletableFuture<List<PlayerWarpRating>> list(String warpId) {
         return plugin.getDatabaseManager().getProvider().getPlayerWarpRatings(warpId);
     }
@@ -27,6 +36,9 @@ public class PlayerWarpRatingManager {
         return TimeUnit.HOURS.toMillis(Math.max(0, hours));
     }
 
+    /**
+     * Stores a player's rating.
+     */
     public CompletableFuture<Void> rate(Player player, PlayerWarp warp, int stars, String comment) {
         if (!player.hasPermission(Permissions.PLAYERWARP_RATE)) {
             plugin.getMessages().send(player, "errors.no-permission");
@@ -85,6 +97,6 @@ public class PlayerWarpRatingManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpRatingManager#rate", player);
+        return Futures.guard(result, "PlayerWarpRatingManager#rate", player);
     }
 }

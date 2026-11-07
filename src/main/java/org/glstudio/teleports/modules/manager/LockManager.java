@@ -1,9 +1,9 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.command.CommandSender;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.common.network.packets.InvalidationScope;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.DestinationLock;
 
 import java.util.List;
@@ -11,18 +11,27 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Holds the warps and servers locked by staff.
+ */
 public class LockManager {
     private final GTeleports plugin;
 
     private final Map<String, DestinationLock> locks = new ConcurrentHashMap<>();
 
+    /**
+     * Creates the manager.
+     */
     public LockManager(GTeleports plugin) {
         this.plugin = plugin;
         refresh();
     }
 
+    /**
+     * Reads the locks again.
+     */
     public void refresh() {
-        Failures.log(plugin.getDatabaseManager().getProvider().getLocks().thenAccept(loaded -> {
+        Futures.log(plugin.getDatabaseManager().getProvider().getLocks().thenAccept(loaded -> {
             locks.clear();
             for (DestinationLock lock : loaded) {
                 locks.put(lock.key(), lock);
@@ -30,6 +39,9 @@ public class LockManager {
         }), "LockManager#refresh");
     }
 
+    /**
+     * Finds the lock of a warp or a server.
+     */
     public DestinationLock find(String type, String target) {
         DestinationLock lock = locks.get(DestinationLock.key(type, target));
 
@@ -39,7 +51,7 @@ public class LockManager {
 
         if (lock.isExpired()) {
             locks.remove(lock.key(), lock);
-            Failures.log(plugin.getDatabaseManager().getProvider().deleteLock(type, target),
+            Futures.log(plugin.getDatabaseManager().getProvider().deleteLock(type, target),
                     "LockManager#expire");
             return null;
         }
@@ -47,22 +59,37 @@ public class LockManager {
         return lock;
     }
 
+    /**
+     * Tells whether a warp or a server is locked.
+     */
     public boolean isLocked(String type, String target) {
         return find(type, target) != null;
     }
 
+    /**
+     * Tells whether a warp is locked.
+     */
     public boolean isWarpLocked(String warp) {
         return isLocked(DestinationLock.WARP, warp);
     }
 
+    /**
+     * Tells whether a server is locked.
+     */
     public boolean isServerLocked(String server) {
         return isLocked(DestinationLock.SERVER, server);
     }
 
+    /**
+     * Lists the locks in force.
+     */
     public List<DestinationLock> active() {
         return locks.values().stream().filter(DestinationLock::isActive).toList();
     }
 
+    /**
+     * Locks a warp or a server.
+     */
     public CompletableFuture<Void> lock(CommandSender staff, String type, String target,
                                         String reason, long until) {
         DestinationLock lock = DestinationLock.of(type, target, reason, staff.getName(), until);
@@ -76,9 +103,12 @@ public class LockManager {
                             "{reason}", lock.reason() == null ? "-" : lock.reason());
                 });
 
-        return Failures.guard(plugin, result, "LockManager#lock", staff);
+        return Futures.guard(result, "LockManager#lock", staff);
     }
 
+    /**
+     * Unlocks a warp or a server.
+     */
     public CompletableFuture<Void> unlock(CommandSender staff, String type, String target) {
         String key = DestinationLock.key(type, target);
         boolean cached = locks.remove(key) != null;
@@ -99,9 +129,12 @@ public class LockManager {
                             "{target}", DestinationLock.normalize(target));
                 });
 
-        return Failures.guard(plugin, result, "LockManager#unlock", staff);
+        return Futures.guard(result, "LockManager#unlock", staff);
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         locks.clear();
     }

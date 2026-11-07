@@ -2,8 +2,8 @@ package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.PlayerRef;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpBan;
@@ -12,9 +12,15 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Manages who is banned from a player warp.
+ */
 public class PlayerWarpBanManager {
     private final GTeleports plugin;
 
+    /**
+     * Creates the manager.
+     */
     public PlayerWarpBanManager(GTeleports plugin) {
         this.plugin = plugin;
     }
@@ -23,11 +29,17 @@ public class PlayerWarpBanManager {
         return Math.max(1, plugin.getConfigManager().getPlayerWarpsConfig().getInt("bans.max-entries", 100));
     }
 
+    /**
+     * Lists the bans of a warp.
+     */
     public CompletableFuture<List<PlayerWarpBan>> list(String warpId) {
         return plugin.getDatabaseManager().getProvider().getPlayerWarpBans(warpId)
                 .thenApply(bans -> bans.stream().filter(PlayerWarpBan::isActive).toList());
     }
 
+    /**
+     * Finds a player's ban from a warp.
+     */
     public CompletableFuture<PlayerWarpBan> find(String warpId, UUID player) {
         return list(warpId).thenApply(bans -> bans.stream()
                 .filter(ban -> ban.player().equals(player))
@@ -35,6 +47,9 @@ public class PlayerWarpBanManager {
                 .orElse(null));
     }
 
+    /**
+     * Bans a player from a warp.
+     */
     public CompletableFuture<Void> add(CommandSender sender, PlayerWarp warp, String targetName,
                                        long durationSeconds, String reason) {
         if (!sender.hasPermission(org.glstudio.teleports.core.util.Permissions.PLAYERWARP_BAN)) {
@@ -84,9 +99,12 @@ public class PlayerWarpBanManager {
             });
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpBanManager#add", sender);
+        return Futures.guard(result, "PlayerWarpBanManager#add", sender);
     }
 
+    /**
+     * Lifts a ban.
+     */
     public CompletableFuture<Void> remove(CommandSender sender, PlayerWarp warp, String targetName) {
         if (!sender.hasPermission(org.glstudio.teleports.core.util.Permissions.PLAYERWARP_BAN)) {
             plugin.getMessages().send(sender, "errors.no-permission");
@@ -105,7 +123,7 @@ public class PlayerWarpBanManager {
                             "{player}", target.name(), "{warp}", warp.getName()));
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpBanManager#remove", sender);
+        return Futures.guard(result, "PlayerWarpBanManager#remove", sender);
     }
 
     private CompletableFuture<PlayerRef> resolve(String name) {

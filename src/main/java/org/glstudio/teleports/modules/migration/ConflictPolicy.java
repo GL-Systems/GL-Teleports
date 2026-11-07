@@ -13,6 +13,9 @@ public enum ConflictPolicy {
     /** Overwrite what is already here with the imported entry. */
     REPLACE;
 
+    /**
+     * Reads a policy from its name.
+     */
     public static ConflictPolicy parse(String value) {
         if (value == null) {
             return null;
@@ -25,6 +28,9 @@ public enum ConflictPolicy {
         }
     }
 
+    /**
+     * Returns the name of this policy.
+     */
     public String key() {
         return name().toLowerCase(Locale.ROOT);
     }

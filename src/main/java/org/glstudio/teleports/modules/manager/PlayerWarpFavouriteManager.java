@@ -1,8 +1,8 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpFavourite;
@@ -11,21 +11,36 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Holds each player's favourite warps.
+ */
 public class PlayerWarpFavouriteManager {
     private final GTeleports plugin;
 
+    /**
+     * Creates the manager.
+     */
     public PlayerWarpFavouriteManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Lists a player's favourites.
+     */
     public CompletableFuture<List<PlayerWarpFavourite>> list(UUID player) {
         return plugin.getDatabaseManager().getProvider().getPlayerWarpFavourites(player);
     }
 
+    /**
+     * Tells whether a warp is a favourite.
+     */
     public CompletableFuture<Boolean> isFavourite(UUID player, String warpId) {
         return list(player).thenApply(favs -> favs.stream().anyMatch(fav -> fav.warpId().equals(warpId)));
     }
 
+    /**
+     * Switches a favourite on or off.
+     */
     public CompletableFuture<Boolean> toggle(Player player, PlayerWarp warp) {
         if (!player.hasPermission(Permissions.PLAYERWARP_FAVOURITE)) {
             plugin.getMessages().send(player, "errors.no-permission");
@@ -51,7 +66,7 @@ public class PlayerWarpFavouriteManager {
                     }));
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpFavouriteManager#toggle", player);
+        return Futures.guard(result, "PlayerWarpFavouriteManager#toggle", player);
     }
 
     private CompletableFuture<Void> adjustCount(PlayerWarp warp, int delta) {

@@ -2,8 +2,8 @@ package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.PlayerRef;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpWhitelistEntry;
@@ -12,9 +12,15 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Manages who may enter a closed player warp.
+ */
 public class PlayerWarpWhitelistManager {
     private final GTeleports plugin;
 
+    /**
+     * Creates the manager.
+     */
     public PlayerWarpWhitelistManager(GTeleports plugin) {
         this.plugin = plugin;
     }
@@ -23,14 +29,23 @@ public class PlayerWarpWhitelistManager {
         return Math.max(1, plugin.getConfigManager().getPlayerWarpsConfig().getInt("whitelist.max-entries", 50));
     }
 
+    /**
+     * Lists the whitelist of a warp.
+     */
     public CompletableFuture<List<PlayerWarpWhitelistEntry>> list(String warpId) {
         return plugin.getDatabaseManager().getProvider().getPlayerWarpWhitelist(warpId);
     }
 
+    /**
+     * Tells whether a player may enter.
+     */
     public CompletableFuture<Boolean> isWhitelisted(String warpId, UUID player) {
         return list(warpId).thenApply(entries -> entries.stream().anyMatch(entry -> entry.player().equals(player)));
     }
 
+    /**
+     * Adds a player to a whitelist.
+     */
     public CompletableFuture<Void> add(CommandSender sender, PlayerWarp warp, String targetName) {
         if (!sender.hasPermission(org.glstudio.teleports.core.util.Permissions.PLAYERWARP_WHITELIST)) {
             plugin.getMessages().send(sender, "errors.no-permission");
@@ -64,9 +79,12 @@ public class PlayerWarpWhitelistManager {
             });
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpWhitelistManager#add", sender);
+        return Futures.guard(result, "PlayerWarpWhitelistManager#add", sender);
     }
 
+    /**
+     * Removes a player from a whitelist.
+     */
     public CompletableFuture<Void> remove(CommandSender sender, PlayerWarp warp, String targetName) {
         if (!sender.hasPermission(org.glstudio.teleports.core.util.Permissions.PLAYERWARP_WHITELIST)) {
             plugin.getMessages().send(sender, "errors.no-permission");
@@ -86,7 +104,7 @@ public class PlayerWarpWhitelistManager {
                             "{player}", target.name(), "{warp}", warp.getName()));
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpWhitelistManager#remove", sender);
+        return Futures.guard(result, "PlayerWarpWhitelistManager#remove", sender);
     }
 
     private CompletableFuture<PlayerRef> resolve(String name) {

@@ -1,11 +1,9 @@
 package org.glstudio.teleports.api;
 
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
-import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
-import org.glstudio.nexus.utils.CC;
-import org.glstudio.nexus.utils.LoggerUtils;
+import org.glstudio.nexus.utils.EventUtils;
+import org.glstudio.nexus.utils.TextFormat;
 
 /**
  * Fires the plugin's own events and reports what a handler decided.
@@ -24,45 +22,24 @@ public final class Events {
     }
 
     /**
-     * Fires an event and reports whether it survived.
+     * Fires an event.
      *
-     * <p>An exception counts as "not cancelled": a handler that crashed expressed no opinion, and
-     * treating that as a veto would let one broken plugin block every teleport on the server.
-     *
-     * @param event the event to fire
-     * @return {@code true} if the operation may proceed
+     * @param event the event
+     * @return {@code true} if so
      */
     public static boolean call(Event event) {
-        try {
-            Bukkit.getPluginManager().callEvent(event);
-        } catch (Exception e) {
-            LoggerUtils.logException("A handler of " + event.getEventName() + " threw", e);
-            return true;
-        }
-
-        return !(event instanceof Cancellable cancellable) || !cancellable.isCancelled();
+        return EventUtils.call(event);
     }
 
     /**
-     * Fires an event, and tells {@code sender} why if a handler cancelled it and left a message.
+     * Fires an event and tells the sender when it was cancelled.
      *
-     * <p>{@code cancelMessage} is literal text written by the handler, not a language.yml key, so
-     * it is rendered directly. MiniMessage markup works; a plain sentence works too.
-     *
-     * @param event         the event to fire
-     * @param sender        who to tell on cancellation; {@code null} to tell nobody
-     * @param cancelMessage the handler's message, usually {@code event.getCancelMessage()}
-     * @return {@code true} if the operation may proceed
+     * @param event the event
+     * @param sender the sender
+     * @param cancelMessage the cancel message
+     * @return {@code true} if so
      */
     public static boolean callAndExplain(Event event, CommandSender sender, String cancelMessage) {
-        if (call(event)) {
-            return true;
-        }
-
-        if (sender != null && cancelMessage != null && !cancelMessage.isBlank()) {
-            sender.sendMessage(CC.miniMessage(cancelMessage));
-        }
-
-        return false;
+        return EventUtils.callAndExplain(event, sender, cancelMessage, TextFormat.MINIMESSAGE);
     }
 }

@@ -31,27 +31,51 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * What the SQL backends share.
+ */
 public abstract class SqlProvider extends AbstractProvider {
+    /**
+     * Creates the provider.
+     */
     protected SqlProvider(GTeleports plugin) {
         super(plugin);
     }
 
+    /**
+     * Borrows a connection.
+     */
     protected abstract Connection connection() throws SQLException;
 
+    /**
+     * Builds the insert-or-overwrite statement of this backend.
+     */
     protected abstract String replaceInto(String table, String... columns);
 
+    /**
+     * Returns the definition of an auto-increment primary key.
+     */
     protected abstract String autoIncrementId();
 
+    /**
+     * Returns the text appended to each CREATE TABLE.
+     */
     protected String tableOptions() {
         return "";
     }
 
+    /**
+     * Returns this server's name.
+     */
     protected String currentServerName() {
         return plugin.getMultiServerSettings() == null
                 ? "unnamed-server"
                 : plugin.getMultiServerSettings().getServerName();
     }
 
+    /**
+     * Builds the column list and the VALUES placeholders of an insert.
+     */
     protected static String columnsAndPlaceholders(String... columns) {
         StringBuilder names = new StringBuilder();
         StringBuilder placeholders = new StringBuilder();
@@ -68,6 +92,9 @@ public abstract class SqlProvider extends AbstractProvider {
         return " (" + names + ") VALUES (" + placeholders + ")";
     }
 
+    /**
+     * Creates the feature tables.
+     */
     protected void createFeatureTables(Connection conn) throws SQLException {
         try (Statement statement = conn.createStatement()) {
             statement.execute(
@@ -216,6 +243,9 @@ public abstract class SqlProvider extends AbstractProvider {
         createIndexQuietly(conn, "idx_pw_favourites_player", "player_warp_favourites", "player");
     }
 
+    /**
+     * Adds the warp override columns.
+     */
     protected void addWarpOverrideColumns(Connection conn) throws SQLException {
         SqlSchema.addColumnIfMissing(conn, "warps", "cost", "DOUBLE");
         SqlSchema.addColumnIfMissing(conn, "warps", "cooldown", "INT");
@@ -233,6 +263,9 @@ public abstract class SqlProvider extends AbstractProvider {
         }
     }
 
+    /**
+     * Reads the warp.
+     */
     protected static Warp readWarp(ResultSet rows) throws SQLException {
         double cost = rows.getDouble("cost");
         Double resolvedCost = rows.wasNull() ? null : cost;
@@ -259,6 +292,9 @@ public abstract class SqlProvider extends AbstractProvider {
                 resolvedDelay);
     }
 
+    /**
+     * Fills the warp settings of a statement.
+     */
     protected static void bindWarpOverrides(PreparedStatement stmt, Warp warp, int firstIndex)
             throws SQLException {
         if (warp.getCost() == null) {
@@ -1340,8 +1376,12 @@ public abstract class SqlProvider extends AbstractProvider {
         });
     }
 
+    /** Fills the parameters of a statement. */
     @FunctionalInterface
     protected interface StatementBinder {
+        /**
+         * Fills the statement.
+         */
         void bind(PreparedStatement statement) throws SQLException;
     }
 }

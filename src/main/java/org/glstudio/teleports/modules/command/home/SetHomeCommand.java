@@ -1,18 +1,24 @@
 package org.glstudio.teleports.modules.command.home;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
-import org.glstudio.nexus.modules.command.Command;
-import org.glstudio.nexus.modules.command.CommandManager;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
+import org.glstudio.nexus.modules.command.Command;
+import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.teleports.GTeleports;
 
 import java.util.List;
 
+/**
+ * The {@code /sethome} command.
+ */
 public class SetHomeCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public SetHomeCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;
@@ -36,7 +42,7 @@ public class SetHomeCommand extends Command {
         }
 
         if (args.length == 0) {
-            Failures.guard(plugin, plugin.getHomeManager().nextAutomaticName(player.getUniqueId())
+            Futures.guard(plugin.getHomeManager().nextAutomaticName(player.getUniqueId())
                     .thenAccept(autoName -> plugin.getServer().getScheduler().runTask(plugin,
                             () -> plugin.getHomeManager().setHome(player, autoName))),
                     "SetHomeCommand#autoName", player);
@@ -65,7 +71,7 @@ public class SetHomeCommand extends Command {
 
         Location location = staff.getLocation();
 
-        Failures.guard(plugin, HomeAdmin.resolve(plugin, target.playerName()).thenAccept(owner ->
+        Futures.guard(HomeAdmin.resolve(plugin, target.playerName()).thenAccept(owner ->
                 plugin.getServer().getScheduler().runTask(plugin, () -> {
                     if (owner == null) {
                         plugin.getMessages().send(staff, "errors.player-never-played",

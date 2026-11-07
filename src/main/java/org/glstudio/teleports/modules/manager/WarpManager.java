@@ -1,24 +1,27 @@
 package org.glstudio.teleports.modules.manager;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.api.Events;
 import org.glstudio.teleports.api.event.WarpCreateEvent;
 import org.glstudio.teleports.api.event.WarpDeleteEvent;
 import org.glstudio.teleports.common.network.packets.InvalidationScope;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.core.util.TeleportNames;
 import org.glstudio.teleports.modules.model.DestinationLock;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.glstudio.teleports.modules.model.Warp;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.entity.Player;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
+/**
+ * Creates, changes and caches warps.
+ */
 public class WarpManager {
     private static final Pattern PERMISSION_PATTERN = Pattern.compile("[A-Za-z0-9_]+(\\.[A-Za-z0-9_*]+)*");
 
@@ -26,11 +29,17 @@ public class WarpManager {
 
     private volatile CompletableFuture<List<Warp>> warpCache;
 
+    /**
+     * Creates the manager.
+     */
     public WarpManager(GTeleports plugin) {
         this.plugin = plugin;
-        Failures.log(getWarps(), "WarpManager#preload");
+        Futures.log(getWarps(), "WarpManager#preload");
     }
 
+    /**
+     * Returns the warps.
+     */
     public CompletableFuture<List<Warp>> getWarps() {
         CompletableFuture<List<Warp>> cached = warpCache;
         if (cached != null) {
@@ -57,6 +66,9 @@ public class WarpManager {
         }
     }
 
+    /**
+     * Returns the cached warps.
+     */
     public List<Warp> getCachedWarps() {
         CompletableFuture<List<Warp>> cached = warpCache;
 
@@ -64,10 +76,13 @@ public class WarpManager {
             return cached.join();
         }
 
-        Failures.log(getWarps(), "WarpManager#warmCache");
+        Futures.log(getWarps(), "WarpManager#warmCache");
         return List.of();
     }
 
+    /**
+     * Returns the warp.
+     */
     public CompletableFuture<Warp> getWarp(String name) {
         String normalized = TeleportNames.normalize(name);
 
@@ -90,6 +105,9 @@ public class WarpManager {
         return false;
     }
 
+    /**
+     * Sets the warp.
+     */
     public CompletableFuture<Void> setWarp(Player player, String name, String permission) {
         if (!TeleportNames.isValid(name)) {
             plugin.getMessages().send(player, "errors.invalid-name",
@@ -134,9 +152,12 @@ public class WarpManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "WarpManager#setWarp", player);
+        return Futures.guard(result, "WarpManager#setWarp", player);
     }
 
+    /**
+     * Sets the warp permission.
+     */
     public CompletableFuture<Void> setWarpPermission(Player player, String name, String permission) {
         if (permissionLooksWrong(player, permission)) {
             return CompletableFuture.completedFuture(null);
@@ -163,9 +184,12 @@ public class WarpManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "WarpManager#setWarpPermission", player);
+        return Futures.guard(result, "WarpManager#setWarpPermission", player);
     }
 
+    /**
+     * Sets the warp override.
+     */
     public CompletableFuture<Void> setWarpOverride(Player player, String name, String field, Double value) {
         String normalized = TeleportNames.normalize(name);
 
@@ -196,13 +220,16 @@ public class WarpManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "WarpManager#setWarpOverride", player);
+        return Futures.guard(result, "WarpManager#setWarpOverride", player);
     }
 
     private static String trim(double value) {
         return value == Math.rint(value) ? String.valueOf((long) value) : String.valueOf(value);
     }
 
+    /**
+     * Deletes the warp.
+     */
     public CompletableFuture<Void> deleteWarp(Player player, String name) {
         String normalized = TeleportNames.normalize(name);
 
@@ -229,9 +256,12 @@ public class WarpManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "WarpManager#deleteWarp", player);
+        return Futures.guard(result, "WarpManager#deleteWarp", player);
     }
 
+    /**
+     * Creates the warp.
+     */
     public CompletableFuture<Boolean> createWarp(String name, Location location, String permission) {
         if (!TeleportNames.isValid(name) || location == null || location.getWorld() == null) {
             return CompletableFuture.completedFuture(false);
@@ -262,6 +292,9 @@ public class WarpManager {
         });
     }
 
+    /**
+     * Removes the warp.
+     */
     public CompletableFuture<Boolean> removeWarp(String name) {
         return plugin.getDatabaseManager().getProvider()
                 .deleteWarp(TeleportNames.normalize(name))
@@ -273,6 +306,9 @@ public class WarpManager {
                 });
     }
 
+    /**
+     * Drops the cache.
+     */
     public void invalidateCache() {
         warpCache = null;
     }
@@ -288,12 +324,18 @@ public class WarpManager {
         plugin.getCrossServerManager().broadcastInvalidation(InvalidationScope.WARP, null);
     }
 
+    /**
+     * Teleports the to warp.
+     */
     public void teleportToWarp(Player player, String name) {
         teleportToWarp(player, name, false);
     }
 
+    /**
+     * Teleports the to warp.
+     */
     public void teleportToWarp(Player player, String name, boolean bypassWarpPermission) {
-        Failures.log(getWarp(name).thenAccept(warp -> {
+        Futures.log(getWarp(name).thenAccept(warp -> {
             if (warp == null) {
                 plugin.getMessages().send(player, "errors.warp-not-found", "{name}", name);
                 return;
@@ -332,6 +374,9 @@ public class WarpManager {
         }), "WarpManager#teleportToWarp");
     }
 
+    /**
+     * Tells whether a warp is closed.
+     */
     public boolean isClosed(Player player, Warp warp) {
         if (player.hasPermission(Permissions.BYPASS_LOCK)) {
             return false;
@@ -356,6 +401,9 @@ public class WarpManager {
         return false;
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         warpCache = null;
     }

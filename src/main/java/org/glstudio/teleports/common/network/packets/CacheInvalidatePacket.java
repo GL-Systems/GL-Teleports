@@ -6,6 +6,9 @@ import org.glstudio.teleports.common.network.PacketType;
 
 import java.util.UUID;
 
+/**
+ * Tells the other servers to drop cached data.
+ */
 @Getter
 public class CacheInvalidatePacket extends Packet {
     private final String sourceServer;
@@ -16,6 +19,9 @@ public class CacheInvalidatePacket extends Packet {
 
     private final long timestamp;
 
+    /**
+     * Creates the packet.
+     */
     public CacheInvalidatePacket(String sourceServer, String sourceInstance,
                                  InvalidationScope scope, UUID owner) {
         this.sourceServer = sourceServer;

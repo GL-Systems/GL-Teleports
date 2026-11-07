@@ -5,15 +5,24 @@ import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.core.util.Permissions;
 
+/**
+ * Works out how many warps a player may own.
+ */
 public class PlayerWarpLimits {
     public static final int UNLIMITED = -1;
 
     private final GTeleports plugin;
 
+    /**
+     * Creates the player warp limits.
+     */
     public PlayerWarpLimits(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Returns the limit.
+     */
     public int getLimit(Player player) {
         if (player.hasPermission(Permissions.PLAYERWARP_LIMIT_UNLIMITED)) {
             return UNLIMITED;

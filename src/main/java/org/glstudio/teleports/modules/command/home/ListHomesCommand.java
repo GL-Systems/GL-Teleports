@@ -1,19 +1,25 @@
 package org.glstudio.teleports.modules.command.home;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
-import org.glstudio.teleports.modules.model.Home;
-import org.glstudio.nexus.modules.command.Command;
-import org.glstudio.nexus.modules.command.CommandManager;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
+import org.glstudio.nexus.modules.command.Command;
+import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.modules.model.Home;
 
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * The {@code /listhomes} command.
+ */
 public class ListHomesCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public ListHomesCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;
@@ -45,7 +51,7 @@ public class ListHomesCommand extends Command {
             return;
         }
 
-        Failures.guard(plugin, HomeAdmin.resolve(plugin, args[0]).thenAccept(owner ->
+        Futures.guard(HomeAdmin.resolve(plugin, args[0]).thenAccept(owner ->
                 plugin.getServer().getScheduler().runTask(plugin, () -> {
                     if (owner == null) {
                         plugin.getMessages().send(sender, "errors.player-never-played", "{player}", args[0]);
@@ -57,7 +63,7 @@ public class ListHomesCommand extends Command {
     }
 
     private void list(CommandSender sender, UUID owner, String ownerName, boolean self) {
-        Failures.guard(plugin, plugin.getHomeManager().getHomes(owner).thenAccept(homes -> {
+        Futures.guard(plugin.getHomeManager().getHomes(owner).thenAccept(homes -> {
             if (homes.isEmpty()) {
                 plugin.getMessages().send(sender, self ? "errors.no-homes" : "errors.no-homes-other",
                         "{player}", ownerName);

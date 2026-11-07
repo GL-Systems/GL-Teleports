@@ -8,6 +8,9 @@ import org.glstudio.teleports.GTeleports;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Loads a destination's chunks before the player arrives.
+ */
 public final class ChunkPreloader {
     private static final long TIMEOUT_SECONDS = 5L;
 
@@ -18,6 +21,9 @@ public final class ChunkPreloader {
         return plugin.getSettings().getBoolean("performance.preload-chunks", true);
     }
 
+    /**
+     * Loads the chunks around a destination.
+     */
     public static CompletableFuture<Void> prepare(GTeleports plugin, Location destination) {
         if (destination == null || !enabled(plugin)) {
             return CompletableFuture.completedFuture(null);

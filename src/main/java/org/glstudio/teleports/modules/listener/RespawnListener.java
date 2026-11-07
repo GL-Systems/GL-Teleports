@@ -12,15 +12,24 @@ import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.manager.BedRespawnManager;
 import org.glstudio.teleports.modules.model.SpawnLocation;
 
+/**
+ * Sends players to their respawn point.
+ */
 public class RespawnListener implements Listener {
     private final GTeleports plugin;
 
     private boolean warnedAboutMissingSpawn;
 
+    /**
+     * Creates the listener.
+     */
     public RespawnListener(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Handles {@link PlayerRespawnEvent}.
+     */
     @EventHandler(priority = EventPriority.NORMAL)
     public void onRespawn(PlayerRespawnEvent event) {
         if (!plugin.getSettings().getBoolean("spawn.respawn-at-spawn", false)) {

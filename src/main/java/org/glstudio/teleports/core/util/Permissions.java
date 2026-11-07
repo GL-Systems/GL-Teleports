@@ -1,5 +1,8 @@
 package org.glstudio.teleports.core.util;
 
+/**
+ * The permission nodes of the plugin.
+ */
 public final class Permissions {
     private static final String ROOT = "golden.teleports.";
 

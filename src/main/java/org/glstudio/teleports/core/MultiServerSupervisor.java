@@ -1,50 +1,54 @@
 package org.glstudio.teleports.core;
 
 import org.bukkit.Bukkit;
+import org.glstudio.nexus.network.NetworkSupervisor;
+import org.glstudio.nexus.proxy.ProxyMessenger;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.common.config.MultiServerSettings;
 import org.glstudio.teleports.common.network.PacketHandler;
 import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
 import org.glstudio.teleports.common.storage.redis.RedisService;
-import org.glstudio.teleports.modules.transfer.BungeePlayerTransferService;
-import org.glstudio.teleports.modules.transfer.PlayerTransferService;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Keeps trying to bring multi-server support up when Redis was unreachable at startup.
+ */
 public class MultiServerSupervisor {
-    private static final long INITIAL_RETRY_SECONDS = 30L;
-    private static final long MAX_RETRY_SECONDS = 300L;
-
+    private static final long CONNECT_TIMEOUT_SECONDS = 15L;
     private static final long NAME_CHECK_DELAY_SECONDS = 60L;
+    private static final Duration PROXY_ANSWER_TIMEOUT = Duration.ofSeconds(5);
 
     private final GTeleports plugin;
+    private final NetworkSupervisor supervisor;
 
-    private volatile boolean stopped;
-    private volatile long retrySeconds = INITIAL_RETRY_SECONDS;
-
+    /**
+     * Creates the supervisor.
+     *
+     * @param plugin the owning plugin
+     */
     public MultiServerSupervisor(GTeleports plugin) {
         this.plugin = plugin;
+        this.supervisor = new NetworkSupervisor(plugin.getExecutors().scheduler(), "Multi-server teleports");
     }
 
+    /** Schedules another attempt, unless multi-server support is already up. */
     public void scheduleRetry() {
-        if (stopped || plugin.getCrossServerManager().isEnabled()) {
+        if (plugin.getCrossServerManager().isEnabled()) {
             return;
         }
-
-        long delay = retrySeconds;
-        LoggerUtils.logInfo("Multi-server teleports are offline; retrying in " + delay + "s.");
-
-        plugin.getExecutors().scheduler().schedule(this::attempt, delay, TimeUnit.SECONDS);
-        retrySeconds = Math.min(retrySeconds * 2, MAX_RETRY_SECONDS);
+        supervisor.scheduleRetry(this::attempt);
     }
 
+    /** Stops retrying. */
     public void stop() {
-        stopped = true;
+        supervisor.stop();
     }
 
     private void attempt() {
-        if (stopped || plugin.getCrossServerManager().isEnabled()) {
+        if (plugin.getCrossServerManager().isEnabled()) {
             return;
         }
 
@@ -52,7 +56,7 @@ public class MultiServerSupervisor {
         RedisService redisService = new RedisService(plugin.getExecutors(), settings);
 
         try {
-            redisService.initialize().orTimeout(15, TimeUnit.SECONDS).join();
+            redisService.initialize().orTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS).join();
         } catch (Exception e) {
             LoggerUtils.logDebug("MultiServerSupervisor", "Redis still unreachable: " + e.getMessage());
             scheduleRetry();
@@ -67,13 +71,13 @@ public class MultiServerSupervisor {
         }
     }
 
-    private void verifyServerName(PlayerTransferService transferService, String serverName) {
+    private void verifyServerName(ProxyMessenger proxyMessenger, String serverName) {
         plugin.getExecutors().scheduler().schedule(() -> {
-            if (stopped || Bukkit.getOnlinePlayers().isEmpty()) {
+            if (supervisor.isStopped() || Bukkit.getOnlinePlayers().isEmpty()) {
                 return;
             }
 
-            transferService.knownServers().thenAccept(servers -> {
+            proxyMessenger.servers(PROXY_ANSWER_TIMEOUT).thenAccept(servers -> {
                 if (servers.isEmpty() || servers.stream().anyMatch(serverName::equalsIgnoreCase)) {
                     return;
                 }
@@ -93,16 +97,16 @@ public class MultiServerSupervisor {
             PacketHandler packetHandler = new PacketHandler(settings, plugin.getExecutors(), redisService);
             plugin.setPacketHandler(packetHandler);
 
-            PlayerTransferService transferService = new BungeePlayerTransferService(plugin);
-            transferService.register();
-            plugin.setPlayerTransferService(transferService);
+            ProxyMessenger proxyMessenger = new ProxyMessenger(plugin);
+            proxyMessenger.register();
+            plugin.setProxyMessenger(proxyMessenger);
 
             PlayerRegistry playerRegistry =
                     new PlayerRegistry(plugin, redisService, plugin.getExecutors(), settings);
             playerRegistry.startHeartbeat();
             plugin.setPlayerRegistry(playerRegistry);
 
-            plugin.getCrossServerManager().attach(packetHandler, transferService, playerRegistry);
+            plugin.getCrossServerManager().attach(packetHandler, proxyMessenger, playerRegistry);
 
             packetHandler.setCrossServerManager(plugin.getCrossServerManager());
             redisService.setPacketHandler(packetHandler);
@@ -114,11 +118,11 @@ public class MultiServerSupervisor {
 
             plugin.getCrossServerManager().announcePresence(true);
 
-            retrySeconds = INITIAL_RETRY_SECONDS;
+            supervisor.reset();
             LoggerUtils.logSuccess("Multi-server teleports are online on channel '" + settings.getChannel()
                     + "' as '" + settings.getServerName() + "'.");
 
-            verifyServerName(transferService, settings.getServerName());
+            verifyServerName(proxyMessenger, settings.getServerName());
         } catch (Exception e) {
             LoggerUtils.logException("MultiServerSupervisor#enable", e);
             scheduleRetry();

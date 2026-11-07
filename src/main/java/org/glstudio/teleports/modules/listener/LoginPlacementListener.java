@@ -8,13 +8,22 @@ import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
+/**
+ * Places players at their destination while they log in.
+ */
 public class LoginPlacementListener implements Listener {
     private final GTeleports plugin;
 
+    /**
+     * Creates the listener.
+     */
     public LoginPlacementListener(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Handles {@link PlayerSpawnLocationEvent}.
+     */
     @EventHandler(priority = EventPriority.HIGH)
     public void onSpawnLocation(PlayerSpawnLocationEvent event) {
         Location destination = plugin.getCrossServerManager().placeAtLogin(event.getPlayer());

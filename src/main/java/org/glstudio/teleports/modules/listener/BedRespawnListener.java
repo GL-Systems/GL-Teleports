@@ -6,13 +6,22 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerSpawnChangeEvent;
 import org.glstudio.teleports.GTeleports;
 
+/**
+ * Remembers beds across servers.
+ */
 public class BedRespawnListener implements Listener {
     private final GTeleports plugin;
 
+    /**
+     * Creates the listener.
+     */
     public BedRespawnListener(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Handles {@link PlayerSpawnChangeEvent}.
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onSpawnChange(PlayerSpawnChangeEvent event) {
         if (!plugin.getBedRespawnManager().isEnabled()) {

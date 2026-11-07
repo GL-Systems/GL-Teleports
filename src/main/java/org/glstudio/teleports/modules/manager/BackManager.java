@@ -2,8 +2,8 @@ package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.model.BackLocation;
 import org.glstudio.teleports.modules.model.TeleportType;
@@ -30,10 +30,16 @@ public class BackManager {
     private final GTeleports plugin;
     private final Map<UUID, BackLocation> cache = new ConcurrentHashMap<>();
 
+    /**
+     * Creates the manager.
+     */
     public BackManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Tells whether this feature is on.
+     */
     public boolean isEnabled() {
         return plugin.getSettings().getBoolean("back.enabled", true);
     }
@@ -73,22 +79,31 @@ public class BackManager {
         BackLocation location = new BackLocation(player.getUniqueId(), origin, originServer);
         cache.put(player.getUniqueId(), location);
 
-        Failures.log(plugin.getDatabaseManager().getProvider().saveBackLocation(location),
+        Futures.log(plugin.getDatabaseManager().getProvider().saveBackLocation(location),
                 "BackManager#recordBackPoint");
     }
 
+    /**
+     * Loads a player's last location.
+     */
     public void load(UUID uuid) {
-        Failures.log(plugin.getDatabaseManager().getProvider().getBackLocation(uuid).thenAccept(location -> {
+        Futures.log(plugin.getDatabaseManager().getProvider().getBackLocation(uuid).thenAccept(location -> {
             if (location != null) {
                 cache.put(uuid, location);
             }
         }), "BackManager#load");
     }
 
+    /**
+     * Forgets what is held for a player.
+     */
     public void forget(UUID uuid) {
         cache.remove(uuid);
     }
 
+    /**
+     * Teleports the back.
+     */
     public void teleportBack(Player player) {
         if (!isEnabled()) {
             plugin.getMessages().send(player, "errors.back-disabled");
@@ -122,6 +137,9 @@ public class BackManager {
                 });
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         cache.clear();
     }

@@ -19,10 +19,16 @@ public interface MigrationProvider {
     /** Other arguments accepted for this source. */
     List<String> aliases();
 
+    /**
+     * Returns the name to show.
+     */
     String displayName();
 
     /** The folder name the source plugin uses under plugins/. */
     String defaultFolder();
 
+    /**
+     * Reads the source data.
+     */
     MigrationData read(Path folder, WorldDirectory worlds) throws MigrationException;
 }

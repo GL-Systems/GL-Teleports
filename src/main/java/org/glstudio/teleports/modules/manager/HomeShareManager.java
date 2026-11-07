@@ -1,8 +1,8 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.core.util.TeleportNames;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.teleports.modules.model.HomeShare;
@@ -12,13 +12,22 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Lets players share their homes.
+ */
 public class HomeShareManager {
     private final GTeleports plugin;
 
+    /**
+     * Creates the manager.
+     */
     public HomeShareManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Tells whether this feature is on.
+     */
     public boolean isEnabled() {
         return plugin.getSettings().getBoolean("home-shares.enabled", true);
     }
@@ -27,6 +36,9 @@ public class HomeShareManager {
         return Math.max(1, plugin.getSettings().getInt("home-shares.max-per-home", 10));
     }
 
+    /**
+     * Invites a player to a home.
+     */
     public CompletableFuture<Void> invite(Player owner, String targetName, String homeName,
                                           long durationSeconds) {
         if (!isEnabled()) {
@@ -59,7 +71,7 @@ public class HomeShareManager {
                     });
                 });
 
-        return Failures.guard(plugin, result, "HomeShareManager#invite", owner);
+        return Futures.guard(result, "HomeShareManager#invite", owner);
     }
 
     private CompletableFuture<Void> grant(Player owner, PlayerRef target, Home home, long durationSeconds) {
@@ -105,6 +117,9 @@ public class HomeShareManager {
         }
     }
 
+    /**
+     * Withdraws an invitation to a home.
+     */
     public CompletableFuture<Void> uninvite(Player owner, String targetName, String homeName) {
         String home = TeleportNames.normalize(homeName);
 
@@ -121,19 +136,28 @@ public class HomeShareManager {
                             "{player}", target.name(), "{home}", home));
         });
 
-        return Failures.guard(plugin, result, "HomeShareManager#uninvite", owner);
+        return Futures.guard(result, "HomeShareManager#uninvite", owner);
     }
 
+    /**
+     * Lists what a player shares.
+     */
     public CompletableFuture<List<HomeShare>> outgoing(UUID owner) {
         return plugin.getDatabaseManager().getProvider().getSharesByOwner(owner)
                 .thenApply(shares -> shares.stream().filter(share -> !share.isExpired()).toList());
     }
 
+    /**
+     * Lists what is shared with a player.
+     */
     public CompletableFuture<List<HomeShare>> incoming(UUID invitee) {
         return plugin.getDatabaseManager().getProvider().getSharesForInvitee(invitee)
                 .thenApply(shares -> shares.stream().filter(share -> !share.isExpired()).toList());
     }
 
+    /**
+     * Tells whether a visitor may use a home.
+     */
     public CompletableFuture<Boolean> mayUse(UUID visitor, UUID owner, String home) {
         if (!isEnabled()) {
             return CompletableFuture.completedFuture(false);
@@ -146,6 +170,9 @@ public class HomeShareManager {
                         .anyMatch(share -> share.home().equalsIgnoreCase(home)));
     }
 
+    /**
+     * Shares a home.
+     */
     public CompletableFuture<Boolean> grant(UUID owner, String ownerName, String home,
                                             UUID invitee, String inviteeName, long durationSeconds) {
         if (!isEnabled() || owner.equals(invitee)) {
@@ -172,6 +199,9 @@ public class HomeShareManager {
         });
     }
 
+    /**
+     * Stops sharing a home.
+     */
     public CompletableFuture<Boolean> revoke(UUID owner, String home, UUID invitee) {
         return plugin.getDatabaseManager().getProvider()
                 .unshareHome(owner, TeleportNames.normalize(home), invitee)
@@ -183,8 +213,11 @@ public class HomeShareManager {
                 });
     }
 
+    /**
+     * Forgets a deleted home.
+     */
     public void forgetHome(UUID owner, String home) {
-        Failures.log(plugin.getDatabaseManager().getProvider().clearSharesOf(owner, home),
+        Futures.log(plugin.getDatabaseManager().getProvider().clearSharesOf(owner, home),
                 "HomeShareManager#forgetHome");
     }
 

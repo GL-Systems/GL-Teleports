@@ -2,12 +2,12 @@ package org.glstudio.teleports.common.storage.redis;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.metadata.MetadataValue;
 import org.bukkit.scheduler.BukkitTask;
+import org.glstudio.nexus.concurrent.NexusExecutors;
 import org.glstudio.nexus.utils.LoggerUtils;
+import org.glstudio.nexus.utils.Players;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.common.config.MultiServerSettings;
-import org.glstudio.teleports.common.concurrent.TeleportExecutors;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -19,6 +19,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Keeps track of the players and servers of the network in Redis.
+ */
 public class PlayerRegistry {
     private static final long ENTRY_TTL_SECONDS = 90L;
     private static final long HEARTBEAT_TICKS = 20L * 30;
@@ -27,7 +30,7 @@ public class PlayerRegistry {
 
     private final GTeleports plugin;
     private final RedisService redisService;
-    private final TeleportExecutors executors;
+    private final NexusExecutors executors;
     private final MultiServerSettings settings;
 
     private BukkitTask heartbeatTask;
@@ -37,7 +40,10 @@ public class PlayerRegistry {
 
     private volatile Set<String> knownServers = Set.of();
 
-    public PlayerRegistry(GTeleports plugin, RedisService redisService, TeleportExecutors executors,
+    /**
+     * Creates the registry.
+     */
+    public PlayerRegistry(GTeleports plugin, RedisService redisService, NexusExecutors executors,
                           MultiServerSettings settings) {
         this.plugin = plugin;
         this.redisService = redisService;
@@ -45,11 +51,14 @@ public class PlayerRegistry {
         this.settings = settings;
     }
 
+    /**
+     * Starts the heartbeat.
+     */
     public void startHeartbeat() {
         heartbeatTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             List<NetworkPlayer> online = new ArrayList<>();
             for (Player player : Bukkit.getOnlinePlayers()) {
-                if (isVanished(player)) {
+                if (Players.isVanished(player)) {
                     continue;
                 }
                 online.add(new NetworkPlayer(player.getUniqueId(), player.getName(), settings.getServerName()));
@@ -76,6 +85,9 @@ public class PlayerRegistry {
                 TimeUnit.SECONDS);
     }
 
+    /**
+     * Stops the heartbeat.
+     */
     public void stopHeartbeat() {
         if (heartbeatTask != null) {
             heartbeatTask.cancel();
@@ -104,8 +116,11 @@ public class PlayerRegistry {
         }
     }
 
+    /**
+     * Adds a player to the network list.
+     */
     public void register(Player player) {
-        if (isVanished(player)) {
+        if (Players.isVanished(player)) {
             return;
         }
 
@@ -121,6 +136,9 @@ public class PlayerRegistry {
         refreshSoon();
     }
 
+    /**
+     * Removes a player from the network list.
+     */
     public void unregister(Player player) {
         UUID uuid = player.getUniqueId();
         String playerName = player.getName();
@@ -145,6 +163,9 @@ public class PlayerRegistry {
         executors.scheduler().schedule(this::refreshDirectory, 1, TimeUnit.SECONDS);
     }
 
+    /**
+     * Finds a player on the network.
+     */
     public CompletableFuture<NetworkPlayer> lookup(String playerName) {
         return CompletableFuture.supplyAsync(() -> {
             String uuid = redisService.get(nameKey(playerName));
@@ -161,19 +182,31 @@ public class PlayerRegistry {
         });
     }
 
+    /**
+     * Lists the names of the players on the network.
+     */
     public List<String> networkPlayerNames() {
         return networkPlayers;
     }
 
+    /**
+     * Lists the servers known to be online.
+     */
     public Set<String> knownServers() {
         return knownServers;
     }
 
+    /**
+     * Tells whether a server is known to be online.
+     */
     public boolean isKnownServer(String server) {
         Set<String> servers = knownServers;
         return servers.isEmpty() || settings.isLocalServer(server) || servers.contains(lower(server));
     }
 
+    /**
+     * Marks the server.
+     */
     public void markServer(String server, boolean online) {
         if (server == null || server.isBlank() || settings.isLocalServer(server)) {
             return;
@@ -205,7 +238,7 @@ public class PlayerRegistry {
             if (leaving != null && player.getName().equalsIgnoreCase(leaving)) {
                 continue;
             }
-            if (isVanished(player)) {
+            if (Players.isVanished(player)) {
                 continue;
             }
             names.add(player.getName());
@@ -277,15 +310,6 @@ public class PlayerRegistry {
             LoggerUtils.logWarn("Could not refresh the network player directory; tab completion "
                     + "will keep the previous names: " + e.getMessage());
         }
-    }
-
-    private boolean isVanished(Player player) {
-        for (MetadataValue meta : player.getMetadata("vanished")) {
-            if (meta.asBoolean()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void write(NetworkPlayer player) {

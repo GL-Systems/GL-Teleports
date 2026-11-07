@@ -9,6 +9,9 @@ import org.glstudio.teleports.modules.model.TeleportType;
 
 import java.util.UUID;
 
+/**
+ * A player travelling because of an accepted request.
+ */
 @Getter
 public class TpaTravelPacket extends Packet {
     private final UUID id;
@@ -30,6 +33,9 @@ public class TpaTravelPacket extends Packet {
     private final TeleportType teleportType;
     private final long timestamp;
 
+    /**
+     * Creates the packet.
+     */
     public TpaTravelPacket(UUID id, String sourceInstance, String handlerServer, UUID travellerUuid,
                            String travellerName, String destinationServer, Location destination,
                            TeleportType teleportType) {
@@ -49,6 +55,9 @@ public class TpaTravelPacket extends Packet {
         this.timestamp = System.currentTimeMillis();
     }
 
+    /**
+     * Returns where this leads.
+     */
     public RemoteDestination toDestination() {
         return new RemoteDestination(destinationServer, world, x, y, z, yaw, pitch);
     }

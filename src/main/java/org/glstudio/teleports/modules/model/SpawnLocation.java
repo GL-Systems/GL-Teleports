@@ -7,6 +7,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 
+/**
+ * The location of the spawn.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -19,6 +22,9 @@ public class SpawnLocation implements TeleportDestination {
     private float pitch;
     private String server;
 
+    /**
+     * Creates the spawn location.
+     */
     public SpawnLocation(Location location, String server) {
         this.world = location.getWorld().getName();
         this.x = location.getX();
@@ -29,6 +35,9 @@ public class SpawnLocation implements TeleportDestination {
         this.server = server;
     }
 
+    /**
+     * Returns this as a location.
+     */
     public Location toLocation() {
         World bukkitWorld = Bukkit.getWorld(world);
         return bukkitWorld == null ? null : new Location(bukkitWorld, x, y, z, yaw, pitch);

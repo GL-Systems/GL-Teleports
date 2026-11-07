@@ -1,12 +1,15 @@
 package org.glstudio.teleports.modules.database.impl;
 
-import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.glstudio.nexus.storage.ConnectionHints;
+import org.glstudio.nexus.storage.DataSources;
+import org.glstudio.nexus.storage.PoolOptions;
+import org.glstudio.nexus.storage.SqlDialect;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.teleports.modules.model.PlayerRef;
-import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.SpawnLocation;
+import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.Warp;
 
 import java.sql.Connection;
@@ -14,13 +17,20 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Stores the data in MySQL.
+ */
 public class MySQLProvider extends SqlProvider {
     private HikariDataSource dataSource;
 
+    /**
+     * Creates the provider.
+     */
     public MySQLProvider(GTeleports plugin) {
         super(plugin);
     }
@@ -32,16 +42,8 @@ public class MySQLProvider extends SqlProvider {
 
     @Override
     protected String replaceInto(String table, String... columns) {
-        StringBuilder updates = new StringBuilder();
-        for (String column : columns) {
-            if (updates.length() > 0) {
-                updates.append(", ");
-            }
-            updates.append(column).append("=VALUES(").append(column).append(')');
-        }
-
-        return "INSERT INTO " + table + columnsAndPlaceholders(columns)
-                + " ON DUPLICATE KEY UPDATE " + updates;
+        List<String> names = Arrays.asList(columns);
+        return SqlDialect.MYSQL.upsert(table, List.of(), names, names);
     }
 
     @Override
@@ -60,65 +62,17 @@ public class MySQLProvider extends SqlProvider {
             try {
                 var dbConfig = plugin.getConfigManager().getDatabaseConfig();
 
-                boolean useSsl = dbConfig.getBoolean("mysql.useSSL");
-
-                HikariConfig config = new HikariConfig();
-                config.setJdbcUrl("jdbc:mysql://" +
-                        dbConfig.getString("mysql.host") + ":" +
-                        dbConfig.getInt("mysql.port") + "/" +
-                        dbConfig.getString("mysql.database") +
-                        "?useSSL=" + useSsl +
-
-                        "&allowPublicKeyRetrieval=" + !useSsl +
-
-                        "&characterEncoding=UTF-8" +
-                        "&useUnicode=true");
-                config.setUsername(dbConfig.getString("mysql.username"));
-                config.setPassword(dbConfig.getString("mysql.password"));
-                config.setMaximumPoolSize(dbConfig.getInt("mysql.pool-size", 10));
-                config.setConnectionTimeout(30000);
-
-                config.setMaxLifetime(1_800_000L);
-
-                dataSource = new HikariDataSource(config);
+                                dataSource = DataSources.create(
+                        DataSources.mysqlUrl(dbConfig.getString("mysql.host"), dbConfig.getInt("mysql.port"),
+                                dbConfig.getString("mysql.database"), dbConfig.getBoolean("mysql.useSSL")),
+                        dbConfig.getString("mysql.username"), dbConfig.getString("mysql.password"),
+                        PoolOptions.named("GL-Teleports-MySQL").maximumPoolSize(dbConfig.getInt("mysql.pool-size", 10)));
 
                 createTables();
             } catch (Exception e) {
-                throw new RuntimeException("Failed to initialize MySQL provider. " + hintFor(e), e);
+                throw new RuntimeException("Failed to initialize MySQL provider. " + ConnectionHints.describe(e, "mysql"), e);
             }
         });
-    }
-
-    private String hintFor(Throwable error) {
-        String message = String.valueOf(rootMessage(error)).toLowerCase(java.util.Locale.ROOT);
-
-        if (message.contains("access denied")) {
-            return "Check mysql.username and mysql.password in database.yml, and that the user is "
-                    + "allowed to connect from this host.";
-        }
-        if (message.contains("unknown database")) {
-            return "The database named in mysql.database does not exist. Create it first; the plugin "
-                    + "creates its tables but not the database itself.";
-        }
-        if (message.contains("communications link failure") || message.contains("connection refused")
-                || message.contains("could not create connection")) {
-            return "Could not reach the server at mysql.host:mysql.port. Check it is running and "
-                    + "reachable from here.";
-        }
-        if (message.contains("no suitable driver") || message.contains("classnotfound")) {
-            return "The MySQL driver was not loaded. It is downloaded at startup via the libraries "
-                    + "block in plugin.yml, which needs the server to have internet access on first run.";
-        }
-        if (message.contains("public key retrieval")) {
-            return "MySQL 8 refused the connection over plain TCP. Set mysql.useSSL to true, or allow "
-                    + "public key retrieval on the server.";
-        }
-        if (message.contains("syntax") || message.contains("errorcode=1064")) {
-            return "The server rejected one of the plugin's own statements, which points at an "
-                    + "unusually old MySQL. Report this with the statement named below.";
-        }
-
-        return "See the cause below.";
     }
 
     private static String rootMessage(Throwable error) {

@@ -35,6 +35,11 @@ public class TeleportsAPI implements GLTeleportsAPI {
 
     private final GTeleports plugin;
 
+    /**
+     * Creates the teleports api.
+     *
+     * @param plugin the plugin
+     */
     public TeleportsAPI(GTeleports plugin) {
         this.plugin = plugin;
     }

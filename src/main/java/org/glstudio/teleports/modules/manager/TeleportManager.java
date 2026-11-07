@@ -1,43 +1,58 @@
 package org.glstudio.teleports.modules.manager;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.api.Events;
-import org.glstudio.teleports.api.event.PostTeleportEvent;
-import org.glstudio.teleports.api.event.PreTeleportEvent;
-import org.glstudio.teleports.modules.model.TeleportRules;
-import org.glstudio.teleports.modules.model.SafetyCheckResult;
-import org.glstudio.teleports.modules.model.TeleportDestination;
-import org.glstudio.teleports.modules.model.TeleportResult;
-import org.glstudio.teleports.modules.model.TeleportType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.glstudio.nexus.utils.LoggerUtils;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.api.Events;
+import org.glstudio.teleports.api.event.PostTeleportEvent;
+import org.glstudio.teleports.api.event.PreTeleportEvent;
+import org.glstudio.teleports.modules.model.SafetyCheckResult;
+import org.glstudio.teleports.modules.model.TeleportDestination;
+import org.glstudio.teleports.modules.model.TeleportResult;
+import org.glstudio.teleports.modules.model.TeleportRules;
+import org.glstudio.teleports.modules.model.TeleportType;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+/**
+ * Runs a teleport from the request to the arrival.
+ */
 public class TeleportManager {
     private final GTeleports plugin;
     private final Map<UUID, Long> immunityMap;
 
+    /**
+     * Creates the manager.
+     */
     public TeleportManager(GTeleports plugin) {
         this.plugin = plugin;
         this.immunityMap = new ConcurrentHashMap<>();
     }
 
+    /**
+     * Starts a teleport.
+     */
     public void requestTeleport(Player player, Location destination, TeleportType type, Consumer<Boolean> callback) {
         requestTeleport(player, destination, type, null, null, callback);
     }
 
+    /**
+     * Starts a teleport.
+     */
     public void requestTeleport(Player player, Location destination, TeleportType type,
                                 TeleportDestination destinationObject, String destinationName,
                                 Consumer<Boolean> callback) {
         requestTeleport(player, destination, type, destinationObject, destinationName, false, callback);
     }
 
+    /**
+     * Starts a teleport.
+     */
     public void requestTeleport(Player player, Location destination, TeleportType type,
                                 TeleportDestination destinationObject, String destinationName,
                                 boolean instant, Consumer<Boolean> callback) {
@@ -47,16 +62,25 @@ public class TeleportManager {
                 target -> completeTeleport(player, target, type, rules, destinationName, callback));
     }
 
+    /**
+     * Starts a teleport to another server.
+     */
     public void requestRemoteTeleport(Player player, TeleportType type, Runnable onReady) {
         requestRemoteTeleport(player, type, null, null, onReady);
     }
 
+    /**
+     * Starts a teleport to another server.
+     */
     public void requestRemoteTeleport(Player player, TeleportType type,
                                       TeleportDestination destinationObject, String destinationName,
                                       Runnable onReady) {
         requestRemoteTeleport(player, type, destinationObject, destinationName, false, onReady);
     }
 
+    /**
+     * Starts a teleport to another server.
+     */
     public void requestRemoteTeleport(Player player, TeleportType type,
                                       TeleportDestination destinationObject, String destinationName,
                                       boolean instant, Runnable onReady) {
@@ -137,10 +161,16 @@ public class TeleportManager {
         return TeleportResult.success();
     }
 
+    /**
+     * Gives back what a teleport cost.
+     */
     public void refund(Player player, TeleportType type) {
         refund(player, type, TeleportRules.global(plugin, type));
     }
 
+    /**
+     * Gives back what a teleport cost.
+     */
     public void refund(Player player, TeleportType type, TeleportRules rules) {
         plugin.getCooldownManager().removeCooldown(player, type);
 
@@ -150,6 +180,9 @@ public class TeleportManager {
         }
     }
 
+    /**
+     * Finishes a teleport and returns where the player ends up.
+     */
     public Location completeArrival(Player player, Location destination, TeleportType type,
                                     String destinationName) {
         if (plugin.getBlacklistWorldManager().isBlacklisted(player, destination.getWorld(), type)) {
@@ -190,6 +223,9 @@ public class TeleportManager {
         return target;
     }
 
+    /**
+     * Finishes a teleport for a player already in place.
+     */
     public void completePlacedArrival(Player player, Location destination, TeleportType type,
                                       String destinationName) {
         plugin.getEffectManager().playTeleportEffects(player, type, EffectManager.EffectStage.TELEPORT_ARRIVE,
@@ -296,6 +332,9 @@ public class TeleportManager {
         }
     }
 
+    /**
+     * Tells whether a player is protected after a teleport.
+     */
     public boolean hasImmunity(Player player) {
         Long immunityEnd = immunityMap.get(player.getUniqueId());
 
@@ -311,10 +350,16 @@ public class TeleportManager {
         return true;
     }
 
+    /**
+     * Forgets what is held for a player.
+     */
     public void forget(UUID uuid) {
         immunityMap.remove(uuid);
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         immunityMap.clear();
     }

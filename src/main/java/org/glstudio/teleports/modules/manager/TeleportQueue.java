@@ -12,6 +12,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Limits how many teleports run at once.
+ */
 public class TeleportQueue {
     private final GTeleports plugin;
 
@@ -21,10 +24,16 @@ public class TeleportQueue {
 
     private BukkitTask drainTask;
 
+    /**
+     * Creates the teleport queue.
+     */
     public TeleportQueue(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Tells whether this feature is on.
+     */
     public boolean isEnabled() {
         return plugin.getSettings().getBoolean("queue.enabled", true);
     }
@@ -37,6 +46,9 @@ public class TeleportQueue {
         return Math.max(1, plugin.getSettings().getInt("queue.notice-threshold", 20));
     }
 
+    /**
+     * Queues an action.
+     */
     public void submit(Player player, Runnable action) {
         if (!isEnabled()) {
             action.run();
@@ -96,16 +108,25 @@ public class TeleportQueue {
         }
     }
 
+    /**
+     * Forgets what is held for a player.
+     */
     public void forget(UUID uuid) {
         if (queued.remove(uuid)) {
             pending.removeIf(entry -> entry.uuid.equals(uuid));
         }
     }
 
+    /**
+     * Returns how many entries there are.
+     */
     public int size() {
         return pending.size();
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         if (drainTask != null) {
             drainTask.cancel();

@@ -1,42 +1,59 @@
 package org.glstudio.teleports.core;
 
+import org.glstudio.nexus.hooks.placeholder.PlaceholderHooks;
+import org.glstudio.nexus.utils.Diagnostics;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Stops the plugin. Each step is isolated, so a failure cannot keep the next ones from running.
+ */
 public class ShutdownService {
+    private static final Duration EXECUTOR_TIMEOUT = Duration.ofSeconds(10);
+
     private final GTeleports plugin;
 
+    /**
+     * Creates the service.
+     */
     public ShutdownService(GTeleports plugin) {
         this.plugin = plugin;
     }
 
-    public void shutdown() {
-        try {
-            unregisterCommands();
-            disableManagers();
-            closeMultiServer();
-            drainPendingWork();
-            closeDatabase();
-
-            LoggerUtils.logSuccess("Services shut down cleanly.");
-        } catch (Exception e) {
-            LoggerUtils.logException("ShutdownService#shutdown", e);
-        }
+    /**
+     * Stops this service.
+     */
+    public void stop() {
+        step("commands", this::unregisterCommands);
+        step("placeholders", () -> PlaceholderHooks.unregister(plugin.getPlaceholderExpansion()));
+        step("managers", this::disableManagers);
+        step("multi-server", this::closeMultiServer);
+        step("executors", this::drainPendingWork);
+        step("database", this::closeDatabase);
 
         LoggerUtils.sendDisable(plugin);
     }
 
+    private void step(String name, Runnable action) {
+        try {
+            action.run();
+        } catch (Exception e) {
+            Diagnostics.logFailure("ShutdownService#" + name, e);
+        }
+    }
+
     private void unregisterCommands() {
-        if (plugin.getCommandRegistry() != null) {
-            plugin.getCommandRegistry().unregisterAll();
+        if (plugin.getCommandManager() != null) {
+            plugin.getCommandManager().unregisterAll();
         }
     }
 
     private void drainPendingWork() {
         if (plugin.getExecutors() != null) {
-            plugin.getExecutors().shutdown();
+            plugin.getExecutors().shutdown(EXECUTOR_TIMEOUT);
         }
     }
 
@@ -110,7 +127,7 @@ public class ShutdownService {
         }
 
         if (plugin.getChatInputManager() != null) {
-            plugin.getChatInputManager().safeDisable();
+            plugin.getChatInputManager().shutdown();
         }
 
         if (plugin.getBackManager() != null) {
@@ -144,13 +161,11 @@ public class ShutdownService {
         }
 
         if (plugin.getRedisService() != null) {
-            try {
-                plugin.getRedisService().close().get(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                LoggerUtils.logWarn("Redis did not close cleanly: " + e.getMessage());
-            }
+            plugin.getRedisService().close();
+        }
+
+        if (plugin.getProxyMessenger() != null) {
+            plugin.getProxyMessenger().close();
         }
     }
 

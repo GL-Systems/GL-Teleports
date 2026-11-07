@@ -7,6 +7,9 @@ import org.glstudio.teleports.modules.model.TpaRequest;
 
 import java.util.UUID;
 
+/**
+ * A teleport request sent to a player on another server.
+ */
 @Getter
 public class TpaRequestPacket extends Packet {
     private final UUID id;
@@ -24,6 +27,9 @@ public class TpaRequestPacket extends Packet {
     private final TpaRequest.TpaType tpaType;
     private final long timestamp;
 
+    /**
+     * Creates the packet.
+     */
     public TpaRequestPacket(UUID id, String sourceInstance, String handlerServer, UUID requesterUuid,
                             String requesterName, String requesterServer, UUID targetUuid,
                             String targetName, TpaRequest.TpaType tpaType) {

@@ -1,6 +1,9 @@
 package org.glstudio.teleports.modules.database.impl;
 
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.glstudio.nexus.utils.LoggerUtils;
+import org.glstudio.nexus.utils.YamlFiles;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.model.BackLocation;
 import org.glstudio.teleports.modules.model.DestinationLock;
@@ -14,20 +17,15 @@ import org.glstudio.teleports.modules.model.PlayerWarpManagerEntry;
 import org.glstudio.teleports.modules.model.PlayerWarpRating;
 import org.glstudio.teleports.modules.model.PlayerWarpSponsoredSlot;
 import org.glstudio.teleports.modules.model.PlayerWarpWhitelistEntry;
-import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.SpawnLocation;
+import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.TeleportRecord;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.glstudio.teleports.modules.model.Warp;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -41,6 +39,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Stores the data in YAML files.
+ */
 public class YamlProvider extends AbstractProvider {
     private final File dataFolder;
     private final File warpsFile;
@@ -78,6 +79,9 @@ public class YamlProvider extends AbstractProvider {
     private YamlConfiguration playerWarpsConfig;
     private YamlConfiguration backLocationsConfig;
 
+    /**
+     * Creates the provider.
+     */
     public YamlProvider(GTeleports plugin) {
         super(plugin);
         this.dataFolder = new File(plugin.getDataFolder(), "data");
@@ -1084,23 +1088,9 @@ public class YamlProvider extends AbstractProvider {
     }
 
     private void saveAtomically(YamlConfiguration config, File target) {
-        Path destination = target.toPath();
-        Path temporary = destination.resolveSibling(target.getName() + ".tmp");
-
         try {
-            config.save(temporary.toFile());
-
-            try {
-                Files.move(temporary, destination,
-                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(temporary, destination, StandardCopyOption.REPLACE_EXISTING);
-            }
+            YamlFiles.saveAtomically(config, target);
         } catch (IOException e) {
-            try {
-                Files.deleteIfExists(temporary);
-            } catch (IOException ignored) {
-            }
             throw new RuntimeException("Failed to write " + target.getName(), e);
         }
     }

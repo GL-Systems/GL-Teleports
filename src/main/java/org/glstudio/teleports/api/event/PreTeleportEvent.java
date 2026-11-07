@@ -65,6 +65,15 @@ public class PreTeleportEvent extends TeleportEvent implements Cancellable {
     @Setter
     private String cancelMessage;
 
+    /**
+     * Creates the event.
+     *
+     * @param player the player
+     * @param type the type
+     * @param origin the origin
+     * @param destination the destination
+     * @param destinationName the destination name
+     */
     public PreTeleportEvent(Player player, TeleportType type, Location origin, Location destination,
                             String destinationName) {
         super(player, type);
@@ -88,6 +97,11 @@ public class PreTeleportEvent extends TeleportEvent implements Cancellable {
         return HANDLERS;
     }
 
+    /**
+     * Returns the handler list of this event.
+     *
+     * @return the handler list
+     */
     public static HandlerList getHandlerList() {
         return HANDLERS;
     }

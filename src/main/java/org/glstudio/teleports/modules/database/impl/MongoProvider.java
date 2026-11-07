@@ -10,6 +10,7 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.WriteModel;
+import org.bson.Document;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.model.BackLocation;
@@ -24,21 +25,23 @@ import org.glstudio.teleports.modules.model.PlayerWarpManagerEntry;
 import org.glstudio.teleports.modules.model.PlayerWarpRating;
 import org.glstudio.teleports.modules.model.PlayerWarpSponsoredSlot;
 import org.glstudio.teleports.modules.model.PlayerWarpWhitelistEntry;
-import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.SpawnLocation;
+import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.TeleportRecord;
 import org.glstudio.teleports.modules.model.TeleportType;
 import org.glstudio.teleports.modules.model.Warp;
-import org.bson.Document;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Stores the data in MongoDB.
+ */
 public class MongoProvider extends AbstractProvider {
     private MongoClient mongoClient;
     private MongoDatabase database;
@@ -62,6 +65,9 @@ public class MongoProvider extends AbstractProvider {
     private MongoCollection<Document> playerWarpSponsoredSlotsCollection;
     private MongoCollection<Document> backLocationsCollection;
 
+    /**
+     * Creates the provider.
+     */
     public MongoProvider(GTeleports plugin) {
         super(plugin);
     }

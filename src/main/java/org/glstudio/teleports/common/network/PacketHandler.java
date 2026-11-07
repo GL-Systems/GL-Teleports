@@ -1,6 +1,9 @@
 package org.glstudio.teleports.common.network;
 
+import org.glstudio.nexus.concurrent.NexusExecutors;
+import org.glstudio.nexus.network.PacketDeduplicator;
 import org.glstudio.nexus.utils.LoggerUtils;
+import org.glstudio.teleports.common.config.MultiServerSettings;
 import org.glstudio.teleports.common.network.packets.CacheInvalidatePacket;
 import org.glstudio.teleports.common.network.packets.ServerPresencePacket;
 import org.glstudio.teleports.common.network.packets.TeleportRequestPacket;
@@ -8,40 +11,43 @@ import org.glstudio.teleports.common.network.packets.TpaRequestPacket;
 import org.glstudio.teleports.common.network.packets.TpaResponsePacket;
 import org.glstudio.teleports.common.network.packets.TpaTravelPacket;
 import org.glstudio.teleports.common.storage.redis.RedisService;
-import org.glstudio.teleports.common.config.MultiServerSettings;
-import org.glstudio.teleports.common.concurrent.TeleportExecutors;
 import org.glstudio.teleports.modules.manager.CrossServerManager;
 import org.glstudio.teleports.modules.manager.TpaManager;
 
-import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Publishes this server's packets and acts on the ones received.
+ */
 public class PacketHandler {
-    private static final long MAX_PACKET_AGE_MS = 30_000L;
-
-    private static final int SEEN_PURGE_THRESHOLD = 512;
-
-    private final Map<UUID, Long> seenPackets = new ConcurrentHashMap<>();
+    private final PacketDeduplicator deduplicator = new PacketDeduplicator();
 
     private final MultiServerSettings settings;
-    private final TeleportExecutors executors;
+    private final NexusExecutors executors;
     private final RedisService redisService;
 
     private volatile CrossServerManager crossServerManager;
 
-    public PacketHandler(MultiServerSettings settings, TeleportExecutors executors, RedisService redisService) {
+    /**
+     * Creates the handler.
+     */
+    public PacketHandler(MultiServerSettings settings, NexusExecutors executors, RedisService redisService) {
         this.settings = settings;
         this.executors = executors;
         this.redisService = redisService;
     }
 
+    /**
+     * Sets the cross server manager.
+     */
     public void setCrossServerManager(CrossServerManager crossServerManager) {
         this.crossServerManager = crossServerManager;
     }
 
+    /**
+     * Publishes a packet, retrying as configured.
+     */
     public CompletableFuture<Void> send(Packet packet) {
         return attemptSend(packet, 0);
     }
@@ -69,12 +75,15 @@ public class PacketHandler {
                 });
     }
 
+    /**
+     * Dispatches a received packet.
+     */
     public void handle(Packet packet) {
         if (packet == null) {
             return;
         }
 
-        if (!accept(packet)) {
+        if (!deduplicator.accept(packet)) {
             return;
         }
 
@@ -155,28 +164,6 @@ public class PacketHandler {
         if (tpaManager() != null) {
             tpaManager().handleRemoteTravel(packet);
         }
-    }
-
-    private boolean accept(Packet packet) {
-        if (!packet.isFresh(MAX_PACKET_AGE_MS)) {
-            LoggerUtils.logWarn("Discarded a " + packet.getType() + " packet that is "
-                    + Math.abs(System.currentTimeMillis() - packet.getSentAt()) / 1000
-                    + "s out of date. Check that the servers' clocks agree.");
-            return false;
-        }
-
-        purgeSeen();
-
-        return seenPackets.putIfAbsent(packet.getPacketId(), packet.getSentAt()) == null;
-    }
-
-    private void purgeSeen() {
-        if (seenPackets.size() < SEEN_PURGE_THRESHOLD) {
-            return;
-        }
-
-        long cutoff = System.currentTimeMillis() - MAX_PACKET_AGE_MS;
-        seenPackets.values().removeIf(sentAt -> sentAt < cutoff);
     }
 
     private boolean addressedToUs(String sourceInstance, String handlerServer) {

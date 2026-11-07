@@ -4,15 +4,15 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
-import org.glstudio.nexus.utils.CC;
-import org.glstudio.nexus.utils.ConfigFile;
-import org.glstudio.teleports.GTeleports;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.menu.button.Button;
 import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
-import org.glstudio.teleports.modules.menu.ButtonPresets;
+import org.glstudio.nexus.modules.menu.button.ButtonPresets;
+import org.glstudio.nexus.modules.menu.config.MenuConfig;
 import org.glstudio.nexus.modules.menu.extra.ConfirmMenu;
 import org.glstudio.nexus.modules.menu.paginated.PaginatedMenu;
-import org.glstudio.teleports.core.util.Failures;
+import org.glstudio.nexus.utils.CC;
+import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.menu.MenuItems;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpCategory;
@@ -26,9 +26,38 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Menu that lists player warps.
+ */
 public class PlayerWarpListMenu extends PaginatedMenu<Button> {
+    /**
+     * What the list shows.
+     */
     public enum Mode {
-        ALL, CATEGORY, SEARCH, FAVOURITES, MINE, SPONSOR
+        /**
+         * All.
+         */
+        ALL,
+        /**
+         * Category.
+         */
+        CATEGORY,
+        /**
+         * Search.
+         */
+        SEARCH,
+        /**
+         * Favourites.
+         */
+        FAVOURITES,
+        /**
+         * Mine.
+         */
+        MINE,
+        /**
+         * Sponsor.
+         */
+        SPONSOR
     }
 
     private final GTeleports plugin;
@@ -40,13 +69,19 @@ public class PlayerWarpListMenu extends PaginatedMenu<Button> {
     private volatile Set<String> favouriteIds = Set.of();
     private volatile boolean loading = true;
 
+    /**
+     * Creates the menu.
+     */
     public PlayerWarpListMenu(GTeleports plugin, Player viewer, Mode mode, String query) {
         this(plugin, viewer, mode, query, null);
     }
 
+    /**
+     * Creates the menu.
+     */
     public PlayerWarpListMenu(GTeleports plugin, Player viewer, Mode mode, String query, Integer sponsorSlot) {
         super(plugin.getMenuManager(), viewer, title(plugin, mode, query),
-                MenuItems.integer(plugin.getConfigManager().getPlayerWarpsListMenu(), "size", 54));
+                new MenuConfig(plugin.getConfigManager().getPlayerWarpsListMenu()).integer("size", 54));
         this.plugin = plugin;
         this.mode = mode;
         this.query = query;
@@ -56,8 +91,8 @@ public class PlayerWarpListMenu extends PaginatedMenu<Button> {
     }
 
     private static String title(GTeleports plugin, Mode mode, String query) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsListMenu();
-        String raw = cfg.getString("title." + mode.name().toLowerCase(Locale.ROOT), "&8Player Warps");
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsListMenu());
+        String raw = cfg.file().getString("title." + mode.name().toLowerCase(Locale.ROOT), "&8Player Warps");
 
         if (mode == Mode.CATEGORY) {
             PlayerWarpCategory category = plugin.getPlayerWarpCategoryRegistry().get(query);
@@ -70,7 +105,7 @@ public class PlayerWarpListMenu extends PaginatedMenu<Button> {
     }
 
     private void load() {
-        Failures.log(plugin.getPlayerWarpManager().getWarps().thenCombine(
+        Futures.log(plugin.getPlayerWarpManager().getWarps().thenCombine(
                 plugin.getPlayerWarpFavouriteManager().list(viewer.getUniqueId()),
                 (all, favs) -> filter(all, favs)
         ).thenAccept(result -> {
@@ -119,8 +154,7 @@ public class PlayerWarpListMenu extends PaginatedMenu<Button> {
 
     @Override
     protected List<Integer> getContentSlots() {
-        List<Integer> configured = MenuItems.intList(plugin.getConfigManager().getPlayerWarpsListMenu(),
-                "content-slots");
+        List<Integer> configured = new MenuConfig(plugin.getConfigManager().getPlayerWarpsListMenu()).intList("content-slots");
         return configured.isEmpty() ? List.of() : configured;
     }
 
@@ -146,63 +180,63 @@ public class PlayerWarpListMenu extends PaginatedMenu<Button> {
     @Override
     protected Button getEmptyButton(Player viewer) {
         if (loading) {
-            return ButtonPresets.loading();
+            return ButtonPresets.loading("&eLoading...", "&7Please wait");
         }
-        return MenuItems.builder(plugin.getConfigManager().getPlayerWarpsListMenu(), "items.empty").build();
+        return new MenuConfig(plugin.getConfigManager().getPlayerWarpsListMenu()).builder("items.empty").build();
     }
 
     @Override
     protected int getEmptySlot(Player viewer) {
-        return MenuItems.slot(plugin.getConfigManager().getPlayerWarpsListMenu(), "items.empty");
+        return new MenuConfig(plugin.getConfigManager().getPlayerWarpsListMenu()).slot("items.empty");
     }
 
     @Override
     protected Map<Integer, Button> getStaticButtons(Player viewer, int currentPage, int maxPage) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsListMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsListMenu());
         Map<Integer, Button> buttons = new HashMap<>();
 
-        int infoSlot = MenuItems.slot(cfg, "items.info");
+        int infoSlot = cfg.slot("items.info");
         if (infoSlot >= 0) {
             int count = warps == null ? 0 : warps.size();
-            ButtonBuilder info = MenuItems.builder(cfg, "items.info");
-            info.lore(MenuItems.apply(MenuItems.lore(cfg, "items.info"),
+            ButtonBuilder info = cfg.builder("items.info");
+            info.lore(MenuItems.apply(cfg.lore("items.info"),
                     "%count%", count, "%page%", currentPage + 1, "%pages%", maxPage + 1));
             buttons.put(infoSlot, info.build());
         }
 
         if (currentPage > 0) {
-            MenuItems.put(buttons, cfg, "items.previous-page", this::previousPage);
+            cfg.put(buttons, "items.previous-page", this::previousPage);
         }
         if (currentPage < maxPage) {
-            MenuItems.put(buttons, cfg, "items.next-page", this::nextPage);
+            cfg.put(buttons, "items.next-page", this::nextPage);
         }
 
-        MenuItems.put(buttons, cfg, "items.back", () -> new PlayerWarpMainMenu(plugin, viewer).open());
-        MenuItems.put(buttons, cfg, "items.close", viewer::closeInventory);
+        cfg.put(buttons, "items.back", () -> new PlayerWarpMainMenu(plugin, viewer).open());
+        cfg.put(buttons, "items.close", viewer::closeInventory);
 
-        MenuItems.putExtras(buttons, cfg, "extra");
+        cfg.putExtras(buttons, "extra");
 
         return buttons;
     }
 
     private Button buildButton(PlayerWarp warp) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsListMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsListMenu());
         String path = "items.warp";
 
         PlayerWarpCategory category = plugin.getPlayerWarpCategoryRegistry().get(warp.getCategoryId());
         String status = "";
         if (warp.isLocked()) {
-            status += MenuItems.string(cfg, "items.locked-suffix", " &c[Locked]");
+            status += cfg.string("items.locked-suffix", " &c[Locked]");
         }
         if (warp.isWhitelistEnabled()) {
-            status += MenuItems.string(cfg, "items.whitelist-suffix", " &e[Whitelist]");
+            status += cfg.string("items.whitelist-suffix", " &e[Whitelist]");
         }
         if (warp.hasPassword()) {
-            status += MenuItems.string(cfg, "items.password-suffix", " &6[Password]");
+            status += cfg.string("items.password-suffix", " &6[Password]");
         }
 
         boolean favourite = favouriteIds.contains(warp.getId());
-        String favouriteSuffix = favourite ? MenuItems.string(cfg, "items.favourite-suffix", " &d★") : "";
+        String favouriteSuffix = favourite ? cfg.string("items.favourite-suffix", " &d★") : "";
 
         Object[] placeholders = {
                 "%name%", warp.getName(),
@@ -218,9 +252,9 @@ public class PlayerWarpListMenu extends PaginatedMenu<Button> {
 
         Material material = resolveIcon(warp);
 
-        ButtonBuilder builder = MenuItems.builder(cfg, path).material(material);
-        builder.name(MenuItems.apply(MenuItems.name(cfg, path, "&a%name%") + favouriteSuffix, placeholders));
-        builder.lore(MenuItems.apply(MenuItems.lore(cfg, path), placeholders));
+        ButtonBuilder builder = cfg.builder(path).material(material);
+        builder.name(MenuItems.apply(cfg.name(path, "&a%name%") + favouriteSuffix, placeholders));
+        builder.lore(MenuItems.apply(cfg.lore(path), placeholders));
 
         if (warp.isUseOwnerHead() && material == Material.PLAYER_HEAD) {
             builder.skullOwner(Bukkit.getOfflinePlayer(warp.getOwner()));
@@ -257,7 +291,7 @@ public class PlayerWarpListMenu extends PaginatedMenu<Button> {
     }
 
     private void confirmSponsor(PlayerWarp warp) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsListMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsListMenu());
         int slotIndex = sponsorSlot;
 
         Object[] placeholders = {
@@ -267,11 +301,11 @@ public class PlayerWarpListMenu extends PaginatedMenu<Button> {
         };
 
         ConfirmMenu.confirm(plugin.getMenuManager(), viewer,
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-sponsor.title", "&8Sponsor?"), placeholders),
+                MenuItems.apply(cfg.string("items.confirm-sponsor.title", "&8Sponsor?"), placeholders),
                 new ButtonBuilder().material(resolveIcon(warp)).name(warp.getName()).build(),
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-sponsor.accept", "&a&lSPONSOR"), placeholders),
-                MenuItems.apply(cfg.getStringList("items.confirm-sponsor.accept-lore"), placeholders),
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-sponsor.cancel", "&c&lCANCEL"), placeholders),
+                MenuItems.apply(cfg.string("items.confirm-sponsor.accept", "&a&lSPONSOR"), placeholders),
+                MenuItems.apply(cfg.file().getStringList("items.confirm-sponsor.accept-lore"), placeholders),
+                MenuItems.apply(cfg.string("items.confirm-sponsor.cancel", "&c&lCANCEL"), placeholders),
                 ButtonBuilder.of(Material.GRAY_STAINED_GLASS_PANE).name(" ").toItemStack(),
                 () -> plugin.getPlayerWarpSponsorManager().sponsor(viewer, slotIndex, warp)
                         .thenRun(() -> Bukkit.getScheduler().runTask(plugin, () -> new PlayerWarpMainMenu(plugin, viewer).open())),

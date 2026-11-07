@@ -2,17 +2,23 @@ package org.glstudio.teleports.modules.command.home;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.HomeShare;
 
 import java.util.List;
 
+/**
+ * The {@code /homeinvites} command.
+ */
 public class HomeInvitesCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public HomeInvitesCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;
@@ -41,7 +47,7 @@ public class HomeInvitesCommand extends Command {
                 ? plugin.getHomeShareManager().outgoing(player.getUniqueId())
                 : plugin.getHomeShareManager().incoming(player.getUniqueId());
 
-        Failures.guard(plugin, lookup.thenAccept(shares -> {
+        Futures.guard(lookup.thenAccept(shares -> {
             if (shares.isEmpty()) {
                 plugin.getMessages().send(player, given ? "share.none-given" : "share.none-received");
                 return;

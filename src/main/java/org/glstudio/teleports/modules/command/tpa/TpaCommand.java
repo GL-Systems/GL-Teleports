@@ -1,17 +1,23 @@
 package org.glstudio.teleports.modules.command.tpa;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.modules.model.TpaRequest;
-import org.glstudio.nexus.modules.command.Command;
-import org.glstudio.nexus.modules.command.CommandManager;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.modules.command.Command;
+import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.modules.model.TpaRequest;
 
 import java.util.List;
 
+/**
+ * The {@code /tpa} command.
+ */
 public class TpaCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public TpaCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;

@@ -4,17 +4,23 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * The {@code /tpablock} command.
+ */
 public class TpaBlockCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public TpaBlockCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;
@@ -63,7 +69,7 @@ public class TpaBlockCommand extends Command {
     }
 
     private void list(Player player) {
-        Failures.guard(plugin, plugin.getTpaBlockManager().list(player.getUniqueId()).thenAccept(blocked -> {
+        Futures.guard(plugin.getTpaBlockManager().list(player.getUniqueId()).thenAccept(blocked -> {
             if (blocked.isEmpty()) {
                 plugin.getMessages().send(player, "tpa.block-list-empty");
                 return;

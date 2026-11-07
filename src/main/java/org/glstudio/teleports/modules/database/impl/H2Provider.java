@@ -1,12 +1,13 @@
 package org.glstudio.teleports.modules.database.impl;
 
-import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.glstudio.nexus.storage.DataSources;
+import org.glstudio.nexus.storage.PoolOptions;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.teleports.modules.model.PlayerRef;
-import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.SpawnLocation;
+import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.Warp;
 
 import java.io.File;
@@ -19,9 +20,15 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Stores the data in an H2 file.
+ */
 public class H2Provider extends SqlProvider {
     private HikariDataSource dataSource;
 
+    /**
+     * Creates the provider.
+     */
     public H2Provider(GTeleports plugin) {
         super(plugin);
     }
@@ -50,12 +57,8 @@ public class H2Provider extends SqlProvider {
                     dataFolder.mkdirs();
                 }
 
-                HikariConfig config = new HikariConfig();
-                config.setJdbcUrl("jdbc:h2:" + new File(dataFolder, "database").getAbsolutePath());
-                config.setMaximumPoolSize(10);
-                config.setConnectionTimeout(30000);
-
-                dataSource = new HikariDataSource(config);
+                dataSource = DataSources.create("jdbc:h2:" + new File(dataFolder, "database").getAbsolutePath(), null, null,
+                        PoolOptions.named("GL-Teleports-H2").maximumPoolSize(10));
 
                 createTables();
             } catch (Exception e) {

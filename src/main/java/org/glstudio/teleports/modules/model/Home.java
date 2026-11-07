@@ -9,6 +9,9 @@ import org.bukkit.World;
 
 import java.util.UUID;
 
+/**
+ * A player's saved location.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -24,6 +27,9 @@ public class Home implements TeleportDestination {
     private long createdAt;
     private String server;
 
+    /**
+     * Creates the home.
+     */
     public Home(UUID owner, String name, Location location, String server) {
         this.owner = owner;
         this.name = name;
@@ -37,6 +43,9 @@ public class Home implements TeleportDestination {
         this.server = server;
     }
 
+    /**
+     * Returns this as a location.
+     */
     public Location toLocation() {
         World bukkitWorld = Bukkit.getWorld(world);
         return bukkitWorld == null ? null : new Location(bukkitWorld, x, y, z, yaw, pitch);

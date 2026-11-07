@@ -4,18 +4,25 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.nexus.utils.DurationParser;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.model.Home;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
+/**
+ * The {@code /homeinvite} command.
+ */
 public class HomeInviteCommand extends Command {
     private static final long INVALID_DURATION = -1L;
 
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public HomeInviteCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;
@@ -83,29 +90,7 @@ public class HomeInviteCommand extends Command {
     }
 
     private static long parseSeconds(String input) {
-        if (input == null || input.isBlank()) {
-            return INVALID_DURATION;
-        }
-
-        String trimmed = input.trim().toLowerCase(Locale.ROOT);
-        char last = trimmed.charAt(trimmed.length() - 1);
-
-        long multiplier = switch (last) {
-            case 's' -> 1L;
-            case 'm' -> 60L;
-            case 'h' -> 3600L;
-            case 'd' -> 86400L;
-            default -> 0L;
-        };
-
-        String number = multiplier == 0L ? trimmed : trimmed.substring(0, trimmed.length() - 1);
-
-        try {
-            long value = Long.parseLong(number);
-
-            return value <= 0 ? INVALID_DURATION : value * (multiplier == 0L ? 1L : multiplier);
-        } catch (NumberFormatException e) {
-            return INVALID_DURATION;
-        }
+        return DurationParser.tryParse(input, true).map(Duration::toSeconds).filter(seconds -> seconds > 0)
+                .orElse(INVALID_DURATION);
     }
 }

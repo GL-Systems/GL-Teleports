@@ -5,10 +5,10 @@ import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.utils.Diagnostics;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.common.network.packets.InvalidationScope;
-import org.glstudio.teleports.core.util.Diagnostics;
 import org.glstudio.teleports.modules.database.DatabaseProvider;
 import org.glstudio.teleports.modules.migration.essentials.EssentialsMigrationProvider;
 import org.glstudio.teleports.modules.migration.huskhomes.HuskHomesMigrationProvider;
@@ -66,14 +66,23 @@ public class MigrationManager {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Map<String, PendingConfirmation> pending = new ConcurrentHashMap<>();
 
+    /**
+     * Creates the manager.
+     */
     public MigrationManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Lists the available sources.
+     */
     public List<String> sourceIds() {
         return providers.stream().map(MigrationProvider::id).toList();
     }
 
+    /**
+     * Finds a source by name.
+     */
     public MigrationProvider find(String argument) {
         String wanted = argument.toLowerCase(Locale.ROOT);
 
@@ -92,6 +101,9 @@ public class MigrationManager {
         scan(sender, sourceArgument, MigrationSelection.all());
     }
 
+    /**
+     * Shows what a migration would do.
+     */
     public void scan(CommandSender sender, String sourceArgument, MigrationSelection selection) {
         start(sender, sourceArgument, selection, false);
     }
@@ -104,6 +116,9 @@ public class MigrationManager {
         confirm(sender, sourceArgument, MigrationSelection.all());
     }
 
+    /**
+     * Runs a planned migration.
+     */
     public void confirm(CommandSender sender, String sourceArgument, MigrationSelection selection) {
         start(sender, sourceArgument, selection, true);
     }
@@ -688,6 +703,9 @@ public class MigrationManager {
         return String.format(Locale.ROOT, "%.1fs", seconds);
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         pending.clear();
     }

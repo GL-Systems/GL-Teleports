@@ -1,12 +1,14 @@
 package org.glstudio.teleports.modules.database.impl;
 
-import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.glstudio.nexus.storage.DataSources;
+import org.glstudio.nexus.storage.PoolOptions;
+import org.glstudio.nexus.storage.SqlDialect;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.teleports.modules.model.PlayerRef;
-import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.SpawnLocation;
+import org.glstudio.teleports.modules.model.StoredLocation;
 import org.glstudio.teleports.modules.model.Warp;
 
 import java.io.File;
@@ -15,13 +17,20 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Stores the data in a SQLite file.
+ */
 public class SQLiteProvider extends SqlProvider {
     private HikariDataSource dataSource;
 
+    /**
+     * Creates the provider.
+     */
     public SQLiteProvider(GTeleports plugin) {
         super(plugin);
     }
@@ -33,7 +42,7 @@ public class SQLiteProvider extends SqlProvider {
 
     @Override
     protected String replaceInto(String table, String... columns) {
-        return "INSERT OR REPLACE INTO " + table + columnsAndPlaceholders(columns);
+        return SqlDialect.SQLITE.replace(table, List.of(), Arrays.asList(columns));
     }
 
     @Override
@@ -50,12 +59,8 @@ public class SQLiteProvider extends SqlProvider {
                     dataFolder.mkdirs();
                 }
 
-                HikariConfig config = new HikariConfig();
-                config.setJdbcUrl("jdbc:sqlite:" + new File(dataFolder, "database.db").getAbsolutePath());
-                config.setMaximumPoolSize(10);
-                config.setConnectionTimeout(30000);
-
-                dataSource = new HikariDataSource(config);
+                dataSource = DataSources.create(DataSources.sqliteUrl(new File(dataFolder, "database.db")), null, null,
+                        PoolOptions.named("GL-Teleports-SQLite").maximumPoolSize(10));
 
                 createTables();
             } catch (Exception e) {

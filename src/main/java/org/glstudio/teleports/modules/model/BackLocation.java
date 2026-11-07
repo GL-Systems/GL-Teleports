@@ -9,6 +9,9 @@ import org.bukkit.World;
 
 import java.util.UUID;
 
+/**
+ * Where {@code /back} returns to.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -23,6 +26,9 @@ public class BackLocation implements TeleportDestination {
     private String server;
     private long savedAt;
 
+    /**
+     * Creates the back location.
+     */
     public BackLocation(UUID owner, Location location, String server) {
         this.owner = owner;
         this.world = location.getWorld().getName();
@@ -35,6 +41,9 @@ public class BackLocation implements TeleportDestination {
         this.savedAt = System.currentTimeMillis();
     }
 
+    /**
+     * Returns this as a location.
+     */
     public Location toLocation() {
         World bukkitWorld = Bukkit.getWorld(world);
         return bukkitWorld == null ? null : new Location(bukkitWorld, x, y, z, yaw, pitch);

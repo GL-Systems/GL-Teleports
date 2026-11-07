@@ -3,13 +3,13 @@ package org.glstudio.teleports.modules.menu.playerwarp;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.glstudio.nexus.utils.CC;
-import org.glstudio.nexus.utils.ConfigFile;
-import org.glstudio.teleports.GTeleports;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.menu.Menu;
 import org.glstudio.nexus.modules.menu.button.Button;
 import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
-import org.glstudio.teleports.core.util.Failures;
+import org.glstudio.nexus.modules.menu.config.MenuConfig;
+import org.glstudio.nexus.utils.CC;
+import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.menu.MenuItems;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpCategory;
@@ -26,11 +26,13 @@ public class PlayerWarpCategoryMenu extends Menu {
     private final GTeleports plugin;
     private final PlayerWarp assignTarget;
 
+    /**
+     * Creates the menu.
+     */
     public PlayerWarpCategoryMenu(GTeleports plugin, Player viewer, PlayerWarp assignTarget) {
         super(plugin.getMenuManager(), viewer,
-                CC.t(MenuItems.string(plugin.getConfigManager().getPlayerWarpsCategoriesMenu(),
-                        "title." + (assignTarget == null ? "browse" : "assign"), "&8Categories")),
-                MenuItems.integer(plugin.getConfigManager().getPlayerWarpsCategoriesMenu(), "size", 27));
+                CC.t(new MenuConfig(plugin.getConfigManager().getPlayerWarpsCategoriesMenu()).string("title." + (assignTarget == null ? "browse" : "assign"), "&8Categories")),
+                new MenuConfig(plugin.getConfigManager().getPlayerWarpsCategoriesMenu()).integer("size", 27));
         this.plugin = plugin;
         this.assignTarget = assignTarget;
     }
@@ -44,16 +46,16 @@ public class PlayerWarpCategoryMenu extends Menu {
     }
 
     private Map<Integer, Button> getButtons(Player viewer) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsCategoriesMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsCategoriesMenu());
         Map<Integer, Button> buttons = new HashMap<>();
 
-        List<Integer> slots = MenuItems.intList(cfg, "content-slots");
+        List<Integer> slots = cfg.intList("content-slots");
         List<PlayerWarpCategory> categories = plugin.getPlayerWarpCategoryRegistry().all();
 
         if (assignTarget != null) {
-            int noneSlot = MenuItems.slot(cfg, "items.none");
+            int noneSlot = cfg.slot("items.none");
             if (noneSlot >= 0) {
-                buttons.put(noneSlot, MenuItems.builder(cfg, "items.none")
+                buttons.put(noneSlot, cfg.builder("items.none")
                         .onClickSimple(() -> assign(viewer, null))
                         .build());
             }
@@ -71,9 +73,9 @@ public class PlayerWarpCategoryMenu extends Menu {
             Material material = ButtonBuilder.parseMaterial(category.icon(), Material.PAPER,
                     "player-warps.yml categories." + category.id());
 
-            ButtonBuilder builder = MenuItems.builder(cfg, "items.category").material(material);
+            ButtonBuilder builder = cfg.builder("items.category").material(material);
             builder.name(MenuItems.apply(category.displayName()));
-            builder.lore(MenuItems.apply(MenuItems.lore(cfg, "items.category"), placeholders));
+            builder.lore(MenuItems.apply(cfg.lore("items.category"), placeholders));
 
             builder.onClickSimple(assignTarget == null
                     ? () -> new PlayerWarpListMenu(plugin, viewer, PlayerWarpListMenu.Mode.CATEGORY,
@@ -83,22 +85,22 @@ public class PlayerWarpCategoryMenu extends Menu {
             buttons.put(slot, builder.build());
         }
 
-        MenuItems.put(buttons, cfg, "items.back", () -> {
+        cfg.put(buttons, "items.back", () -> {
             if (assignTarget != null) {
                 new PlayerWarpManageMenu(plugin, viewer, assignTarget).open();
             } else {
                 new PlayerWarpMainMenu(plugin, viewer).open();
             }
         });
-        MenuItems.put(buttons, cfg, "items.close", viewer::closeInventory);
+        cfg.put(buttons, "items.close", viewer::closeInventory);
 
-        MenuItems.putExtras(buttons, cfg, "extra");
+        cfg.putExtras(buttons, "extra");
 
         return buttons;
     }
 
     private void assign(Player viewer, String categoryId) {
-        Failures.log(plugin.getPlayerWarpManager().setCategory(viewer, assignTarget.getName(), categoryId)
+        Futures.log(plugin.getPlayerWarpManager().setCategory(viewer, assignTarget.getName(), categoryId)
                 .thenCompose(ignored -> plugin.getPlayerWarpManager().getWarp(assignTarget.getId()))
                 .thenAccept(fresh -> Bukkit.getScheduler().runTask(plugin, () -> {
                     if (!viewer.isOnline()) {

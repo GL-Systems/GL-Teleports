@@ -9,6 +9,9 @@ import org.glstudio.teleports.modules.model.TeleportType;
 
 import java.util.UUID;
 
+/**
+ * A teleport to carry out on another server.
+ */
 @Getter
 public class TeleportRequestPacket extends Packet {
     private final String sourceServer;
@@ -29,6 +32,9 @@ public class TeleportRequestPacket extends Packet {
 
     private final long timestamp;
 
+    /**
+     * Creates the packet.
+     */
     public TeleportRequestPacket(String sourceServer, String sourceInstance, String targetServer,
                                  UUID playerUuid, String playerName, TeleportType teleportType,
                                  TeleportDestination destination, String destinationName) {
@@ -48,6 +54,9 @@ public class TeleportRequestPacket extends Packet {
         this.timestamp = System.currentTimeMillis();
     }
 
+    /**
+     * Builds the pending teleport this packet asks for.
+     */
     public PendingTeleport toPendingTeleport(long expiresAt) {
         return new PendingTeleport(teleportType, world, x, y, z, yaw, pitch, expiresAt, destinationName);
     }

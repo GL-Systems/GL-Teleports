@@ -1,8 +1,8 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.PlayerRef;
 
 import java.util.Map;
@@ -11,15 +11,24 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Holds who has blocked whose teleport requests.
+ */
 public class TpaBlockManager {
     private final GTeleports plugin;
 
     private final Map<UUID, Set<UUID>> blocks = new ConcurrentHashMap<>();
 
+    /**
+     * Creates the manager.
+     */
     public TpaBlockManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Tells whether this feature is on.
+     */
     public boolean isEnabled() {
         return plugin.getSettings().getBoolean("tpa-blocks.enabled", true);
     }
@@ -28,12 +37,15 @@ public class TpaBlockManager {
         return Math.max(1, plugin.getSettings().getInt("tpa-blocks.max-entries", 50));
     }
 
+    /**
+     * Loads who a player blocks.
+     */
     public void load(UUID uuid) {
         if (!isEnabled()) {
             return;
         }
 
-        Failures.log(plugin.getDatabaseManager().getProvider().getTpaBlocks(uuid)
+        Futures.log(plugin.getDatabaseManager().getProvider().getTpaBlocks(uuid)
                 .thenAccept(loaded -> {
                     Set<UUID> list = ConcurrentHashMap.newKeySet();
                     list.addAll(loaded);
@@ -41,6 +53,9 @@ public class TpaBlockManager {
                 }), "TpaBlockManager#load");
     }
 
+    /**
+     * Tells whether a player blocks another.
+     */
     public boolean blocks(UUID target, UUID requester) {
         if (!isEnabled()) {
             return false;
@@ -50,6 +65,9 @@ public class TpaBlockManager {
         return list != null && list.contains(requester);
     }
 
+    /**
+     * Blocks a player.
+     */
     public CompletableFuture<Void> block(Player owner, String targetName) {
         if (!isEnabled()) {
             plugin.getMessages().send(owner, "errors.tpa-blocks-disabled");
@@ -89,9 +107,12 @@ public class TpaBlockManager {
                             "{player}", target.name()));
         });
 
-        return Failures.guard(plugin, result, "TpaBlockManager#block", owner);
+        return Futures.guard(result, "TpaBlockManager#block", owner);
     }
 
+    /**
+     * Unblocks a player.
+     */
     public CompletableFuture<Void> unblock(Player owner, String targetName) {
         CompletableFuture<Void> result = resolve(targetName).thenCompose(target -> {
             if (target == null) {
@@ -111,13 +132,19 @@ public class TpaBlockManager {
                             "{player}", target.name()));
         });
 
-        return Failures.guard(plugin, result, "TpaBlockManager#unblock", owner);
+        return Futures.guard(result, "TpaBlockManager#unblock", owner);
     }
 
+    /**
+     * Lists who a player blocks.
+     */
     public CompletableFuture<Set<UUID>> list(UUID owner) {
         return plugin.getDatabaseManager().getProvider().getTpaBlocks(owner);
     }
 
+    /**
+     * Forgets what is held for a player.
+     */
     public void forget(UUID uuid) {
         blocks.remove(uuid);
     }
@@ -132,6 +159,9 @@ public class TpaBlockManager {
         return plugin.getDatabaseManager().getProvider().findPlayer(name);
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         blocks.clear();
     }

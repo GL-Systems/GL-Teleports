@@ -4,11 +4,17 @@ import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.glstudio.teleports.GTeleports;
 
+/**
+ * The costs and waits of a teleport.
+ */
 public record TeleportRules(double cost, int cooldownSeconds, int delaySeconds) {
     public static final String COOLDOWN_PERMISSION = "golden.teleports.cooldown.";
 
     public static final String DELAY_PERMISSION = "golden.teleports.delay.";
 
+    /**
+     * Returns the rules from the settings.
+     */
     public static TeleportRules global(GTeleports plugin, TeleportType type) {
         String base = "teleport-settings." + type.getConfigKey() + ".";
 
@@ -18,6 +24,9 @@ public record TeleportRules(double cost, int cooldownSeconds, int delaySeconds) 
                 plugin.getSettings().getInt(base + "delay", 0));
     }
 
+    /**
+     * Returns the rules that apply to a player.
+     */
     public static TeleportRules resolve(GTeleports plugin, Player player, TeleportType type,
                                         TeleportDestination destination) {
         TeleportRules base = global(plugin, type);

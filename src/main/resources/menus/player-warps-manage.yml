@@ -1,3 +1,5 @@
+config-version: 1
+
 # The owner/manager hub for a single warp - also what /pw settings <warp> opens directly.
 #
 # Every item takes slot/material/amount/name/lore/glow/custom-model-data/item-flags, and an EXTRA

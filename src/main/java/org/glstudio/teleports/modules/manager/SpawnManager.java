@@ -1,26 +1,35 @@
 package org.glstudio.teleports.modules.manager;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.common.network.packets.InvalidationScope;
-import org.glstudio.teleports.core.util.Failures;
-import org.glstudio.teleports.modules.model.SpawnLocation;
-import org.glstudio.teleports.modules.model.TeleportType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.common.network.packets.InvalidationScope;
+import org.glstudio.teleports.modules.model.SpawnLocation;
+import org.glstudio.teleports.modules.model.TeleportType;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Holds the server spawn.
+ */
 public class SpawnManager {
     private final GTeleports plugin;
 
     private volatile CompletableFuture<SpawnLocation> spawnCache;
 
+    /**
+     * Creates the manager.
+     */
     public SpawnManager(GTeleports plugin) {
         this.plugin = plugin;
-        Failures.log(getSpawn(), "SpawnManager#preload");
+        Futures.log(getSpawn(), "SpawnManager#preload");
     }
 
+    /**
+     * Returns the spawn.
+     */
     public CompletableFuture<SpawnLocation> getSpawn() {
         CompletableFuture<SpawnLocation> cached = spawnCache;
         if (cached != null) {
@@ -46,6 +55,9 @@ public class SpawnManager {
         }
     }
 
+    /**
+     * Returns the cached spawn.
+     */
     public SpawnLocation getCachedSpawn() {
         CompletableFuture<SpawnLocation> cached = spawnCache;
 
@@ -53,10 +65,13 @@ public class SpawnManager {
             return cached.join();
         }
 
-        Failures.log(getSpawn(), "SpawnManager#warmCache");
+        Futures.log(getSpawn(), "SpawnManager#warmCache");
         return null;
     }
 
+    /**
+     * Sets the spawn.
+     */
     public CompletableFuture<Void> setSpawn(Player player) {
         SpawnLocation spawn = new SpawnLocation(player.getLocation(),
                 plugin.getCrossServerManager().currentServer());
@@ -68,9 +83,12 @@ public class SpawnManager {
                     plugin.getMessages().send(player, "spawn.set");
                 });
 
-        return Failures.guard(plugin, result, "SpawnManager#setSpawn", player);
+        return Futures.guard(result, "SpawnManager#setSpawn", player);
     }
 
+    /**
+     * Drops the cache.
+     */
     public void invalidateCache() {
         spawnCache = null;
     }
@@ -81,12 +99,18 @@ public class SpawnManager {
         }
     }
 
+    /**
+     * Teleports the to spawn.
+     */
     public void teleportToSpawn(Player player) {
         teleportToSpawn(player, false);
     }
 
+    /**
+     * Teleports the to spawn.
+     */
     public void teleportToSpawn(Player player, boolean instant) {
-        Failures.log(getSpawn().thenAccept(spawn -> {
+        Futures.log(getSpawn().thenAccept(spawn -> {
             if (spawn == null) {
                 plugin.getMessages().send(player, "errors.spawn-not-set");
                 return;
@@ -115,6 +139,9 @@ public class SpawnManager {
         }), "SpawnManager#teleportToSpawn");
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         spawnCache = null;
     }

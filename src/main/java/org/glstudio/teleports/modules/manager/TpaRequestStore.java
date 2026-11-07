@@ -8,15 +8,24 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Shares open teleport requests between servers.
+ */
 public class TpaRequestStore {
     private final GTeleports plugin;
 
     private final Set<UUID> localRequests = ConcurrentHashMap.newKeySet();
 
+    /**
+     * Creates the tpa request store.
+     */
     public TpaRequestStore(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Records a new request.
+     */
     public void open(UUID requestId, int timeoutSeconds) {
         if (!shared()) {
             localRequests.add(requestId);
@@ -34,6 +43,9 @@ public class TpaRequestStore {
                 });
     }
 
+    /**
+     * Takes a request, if nobody has.
+     */
     public CompletableFuture<Boolean> claim(UUID requestId) {
         if (!shared()) {
             return CompletableFuture.completedFuture(localRequests.remove(requestId));
@@ -50,6 +62,9 @@ public class TpaRequestStore {
                 });
     }
 
+    /**
+     * Drops a request.
+     */
     public void discard(UUID requestId) {
         localRequests.remove(requestId);
 

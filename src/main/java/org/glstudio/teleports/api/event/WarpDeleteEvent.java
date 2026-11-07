@@ -41,6 +41,12 @@ public class WarpDeleteEvent extends PlayerEvent implements Cancellable {
     @Setter
     private String cancelMessage;
 
+    /**
+     * Creates the event.
+     *
+     * @param player the player
+     * @param warp the warp
+     */
     public WarpDeleteEvent(Player player, Warp warp) {
         super(player);
         this.warp = warp;
@@ -61,6 +67,11 @@ public class WarpDeleteEvent extends PlayerEvent implements Cancellable {
         return HANDLERS;
     }
 
+    /**
+     * Returns the handler list of this event.
+     *
+     * @return the handler list
+     */
     public static HandlerList getHandlerList() {
         return HANDLERS;
     }

@@ -37,6 +37,12 @@ public class HomeDeleteEvent extends PlayerEvent implements Cancellable {
     @Setter
     private String cancelMessage;
 
+    /**
+     * Creates the event.
+     *
+     * @param player the player
+     * @param home the home
+     */
     public HomeDeleteEvent(Player player, Home home) {
         super(player);
         this.home = home;
@@ -57,6 +63,11 @@ public class HomeDeleteEvent extends PlayerEvent implements Cancellable {
         return HANDLERS;
     }
 
+    /**
+     * Returns the handler list of this event.
+     *
+     * @return the handler list
+     */
     public static HandlerList getHandlerList() {
         return HANDLERS;
     }

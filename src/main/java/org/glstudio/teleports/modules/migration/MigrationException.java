@@ -10,22 +10,34 @@ public class MigrationException extends Exception {
     private final String messageKey;
     private final String[] placeholders;
 
+    /**
+     * Creates the migration exception.
+     */
     public MigrationException(String messageKey, String detail, String... placeholders) {
         super(detail);
         this.messageKey = messageKey;
         this.placeholders = placeholders;
     }
 
+    /**
+     * Creates the migration exception.
+     */
     public MigrationException(String messageKey, String detail, Throwable cause, String... placeholders) {
         super(detail, cause);
         this.messageKey = messageKey;
         this.placeholders = placeholders;
     }
 
+    /**
+     * Returns the language key.
+     */
     public String messageKey() {
         return messageKey;
     }
 
+    /**
+     * Returns the placeholder pairs.
+     */
     public String[] placeholders() {
         return placeholders.clone();
     }

@@ -2,8 +2,8 @@ package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.PlayerRef;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpManagerEntry;
@@ -19,18 +19,30 @@ import java.util.concurrent.CompletableFuture;
 public class PlayerWarpManagerRoleManager {
     private final GTeleports plugin;
 
+    /**
+     * Creates the manager.
+     */
     public PlayerWarpManagerRoleManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Lists the managers of a warp.
+     */
     public CompletableFuture<List<PlayerWarpManagerEntry>> list(String warpId) {
         return plugin.getDatabaseManager().getProvider().getPlayerWarpManagers(warpId);
     }
 
+    /**
+     * Tells whether a player manages a warp.
+     */
     public CompletableFuture<Boolean> isManager(String warpId, UUID player) {
         return list(warpId).thenApply(entries -> entries.stream().anyMatch(entry -> entry.player().equals(player)));
     }
 
+    /**
+     * Tells whether a player may change a warp.
+     */
     public CompletableFuture<Boolean> mayManage(PlayerWarp warp, UUID player) {
         if (warp.isOwner(player)) {
             return CompletableFuture.completedFuture(true);
@@ -38,6 +50,9 @@ public class PlayerWarpManagerRoleManager {
         return isManager(warp.getId(), player);
     }
 
+    /**
+     * Makes a player a manager.
+     */
     public CompletableFuture<Void> add(CommandSender sender, PlayerWarp warp, String targetName) {
         CompletableFuture<Void> result = resolve(targetName).thenCompose(target -> {
             if (target == null) {
@@ -65,9 +80,12 @@ public class PlayerWarpManagerRoleManager {
             });
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpManagerRoleManager#add", sender);
+        return Futures.guard(result, "PlayerWarpManagerRoleManager#add", sender);
     }
 
+    /**
+     * Removes a manager.
+     */
     public CompletableFuture<Void> remove(CommandSender sender, PlayerWarp warp, String targetName) {
         CompletableFuture<Void> result = resolve(targetName).thenCompose(target -> {
             if (target == null) {
@@ -82,7 +100,7 @@ public class PlayerWarpManagerRoleManager {
                             "{player}", target.name(), "{warp}", warp.getName()));
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpManagerRoleManager#remove", sender);
+        return Futures.guard(result, "PlayerWarpManagerRoleManager#remove", sender);
     }
 
     private CompletableFuture<PlayerRef> resolve(String name) {

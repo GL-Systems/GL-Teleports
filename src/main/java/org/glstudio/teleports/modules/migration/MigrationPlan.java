@@ -30,15 +30,24 @@ public record MigrationPlan(String storage, List<Home> homes, List<Warp> warps, 
      */
     public record Counts(int found, int created, int renamed, int replaced, int unchanged, int conflicts,
                          int elsewhere, int invalid) {
+        /**
+         * Counts what will be imported.
+         */
         public int imported() {
             return created + renamed + replaced;
         }
 
+        /**
+         * Counts what will be skipped.
+         */
         public int skipped() {
             return unchanged + conflicts + elsewhere;
         }
     }
 
+    /**
+     * Tells whether this holds nothing.
+     */
     public boolean isEmpty() {
         return homes.isEmpty() && warps.isEmpty() && playerWarps.isEmpty();
     }

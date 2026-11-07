@@ -1,33 +1,41 @@
 package org.glstudio.teleports.modules.manager;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.modules.model.TeleportType;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.utils.Registries;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.modules.model.TeleportType;
 
 import java.time.Duration;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Plays the sounds, particles and titles of teleports.
+ */
 public class EffectManager {
     private final GTeleports plugin;
     private final Map<UUID, BossBar> activeBossBars;
     private final MiniMessage miniMessage;
 
+    /**
+     * Creates the manager.
+     */
     public EffectManager(GTeleports plugin) {
         this.plugin = plugin;
         this.activeBossBars = new ConcurrentHashMap<>();
         this.miniMessage = MiniMessage.miniMessage();
     }
 
+    /**
+     * Clears the boss bar.
+     */
     public void clearBossBar(Player player) {
         BossBar bossBar = activeBossBars.remove(player.getUniqueId());
 
@@ -36,20 +44,42 @@ public class EffectManager {
         }
     }
 
+    /** The moments of a teleport that can have effects. */
     public enum EffectStage {
+        /**
+         * Delay start.
+         */
         DELAY_START,
 
+        /**
+         * Delay tick.
+         */
         DELAY_TICK,
 
+        /**
+         * Teleport.
+         */
         TELEPORT,
 
+        /**
+         * Teleport arrive.
+         */
         TELEPORT_ARRIVE,
 
+        /**
+         * Cooldown start.
+         */
         COOLDOWN_START,
 
+        /**
+         * Cancelled.
+         */
         CANCELLED
     }
 
+    /**
+     * Plays the effects of a finished teleport.
+     */
     public void playTeleportEffects(Player player, TeleportType type, EffectStage stage,
                                     String destinationName) {
         String basePath = basePath(type, stage);
@@ -71,6 +101,9 @@ public class EffectManager {
                 + stage.name().toLowerCase(java.util.Locale.ROOT).replace('_', '-');
     }
 
+    /**
+     * Plays the effects of a waiting teleport.
+     */
     public void playDelayEffects(Player player, TeleportType type, int remainingSeconds, int totalSeconds,
                                  String destinationName) {
         String basePath = "effects." + type.getConfigKey() + ".delay-tick";
@@ -84,11 +117,7 @@ public class EffectManager {
             float volume = (float) plugin.getSettings().getDouble(basePath + ".sound.volume", 1.0);
             float pitch = (float) plugin.getSettings().getDouble(basePath + ".sound.pitch", 1.0);
 
-            try {
-                Sound sound = Sound.valueOf(soundName);
-                player.playSound(player.getLocation(), sound, volume, pitch);
-            } catch (IllegalArgumentException ignored) {
-            }
+            Registries.sound(soundName).ifPresent(sound -> player.playSound(player.getLocation(), sound, volume, pitch));
         }
 
         playParticles(player, basePath);
@@ -112,11 +141,7 @@ public class EffectManager {
         float volume = (float) plugin.getSettings().getDouble(basePath + ".sound.volume", 1.0);
         float pitch = (float) plugin.getSettings().getDouble(basePath + ".sound.pitch", 1.0);
 
-        try {
-            Sound sound = Sound.valueOf(soundName);
-            player.playSound(player.getLocation(), sound, volume, pitch);
-        } catch (IllegalArgumentException ignored) {
-        }
+        Registries.sound(soundName).ifPresent(sound -> player.playSound(player.getLocation(), sound, volume, pitch));
     }
 
     private void playParticles(Player player, String basePath) {
@@ -127,12 +152,8 @@ public class EffectManager {
         String particleName = plugin.getSettings().getString(basePath + ".particle.type", "PORTAL");
         int count = plugin.getSettings().getInt(basePath + ".particle.count", 20);
 
-        try {
-            Particle particle = Particle.valueOf(particleName);
-            Location loc = player.getLocation().clone().add(0, 1, 0);
-            player.getWorld().spawnParticle(particle, loc, count, 0.5, 0.5, 0.5, 0.1);
-        } catch (IllegalArgumentException ignored) {
-        }
+        Location loc = player.getLocation().clone().add(0, 1, 0);
+        Registries.particle(particleName).ifPresent(particle -> player.getWorld().spawnParticle(particle, loc, count, 0.5, 0.5, 0.5, 0.1));
     }
 
     private void playTitle(Player player, String basePath, String destinationName) {
@@ -228,6 +249,9 @@ public class EffectManager {
         return text.replace("{name}", destinationName == null ? "" : destinationName);
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         activeBossBars.forEach((uuid, bossBar) -> {
             Player player = Bukkit.getPlayer(uuid);

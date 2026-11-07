@@ -3,6 +3,7 @@ package org.glstudio.teleports.modules.command.home;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.utils.Players;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.model.Home;
@@ -13,15 +14,24 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * What the home commands need to act on other players' homes.
+ */
 public final class HomeAdmin {
     public static final String PERMISSION = Permissions.HOME_ADMIN;
 
     private HomeAdmin() {
     }
 
+    /**
+     * A home and, optionally, whose it is.
+     */
     public record Target(String playerName, String homeName) {
     }
 
+    /**
+     * Splits a {@code player:home} argument.
+     */
     public static Target parse(String argument) {
         int separator = argument.indexOf(':');
         if (separator <= 0) {
@@ -30,6 +40,9 @@ public final class HomeAdmin {
         return new Target(argument.substring(0, separator), argument.substring(separator + 1));
     }
 
+    /**
+     * Finds a player by name.
+     */
     public static CompletableFuture<PlayerRef> resolve(GTeleports plugin, String playerName) {
         PlayerRef local = resolveCached(playerName);
 
@@ -40,6 +53,9 @@ public final class HomeAdmin {
         return plugin.getDatabaseManager().getProvider().findPlayer(playerName);
     }
 
+    /**
+     * Resolves the cached.
+     */
     public static PlayerRef resolveCached(String playerName) {
         Player online = Bukkit.getPlayerExact(playerName);
         if (online != null) {
@@ -54,6 +70,9 @@ public final class HomeAdmin {
         return new PlayerRef(cached.getUniqueId(), cached.getName() != null ? cached.getName() : playerName);
     }
 
+    /**
+     * Completes a home argument.
+     */
     public static List<String> completeHomeArgument(GTeleports plugin, Player sender, String argument) {
         boolean staff = sender.hasPermission(PERMISSION);
         Target target = parse(argument);
@@ -73,23 +92,18 @@ public final class HomeAdmin {
 
         List<String> completions = homeNames(plugin, sender.getUniqueId(), "");
         if (staff) {
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                if (sender.canSee(online)) {
-                    completions.add(online.getName() + ":");
-                }
+            for (String name : Players.visibleNames(sender)) {
+                completions.add(name + ":");
             }
         }
         return completions;
     }
 
+    /**
+     * Lists the player names the sender can see.
+     */
     public static List<String> completePlayerArgument(Player sender) {
-        List<String> names = new ArrayList<>();
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (sender.canSee(online)) {
-                names.add(online.getName());
-            }
-        }
-        return names;
+        return Players.visibleNames(sender);
     }
 
     private static List<String> homeNames(GTeleports plugin, UUID owner, String prefix) {

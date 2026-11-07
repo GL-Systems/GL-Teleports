@@ -9,9 +9,15 @@ import org.glstudio.teleports.modules.menu.HomesMenu;
 
 import java.util.List;
 
+/**
+ * The {@code /homes} command.
+ */
 public class HomesCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public HomesCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;

@@ -6,6 +6,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 
+/**
+ * A public named location.
+ */
 @Data
 @NoArgsConstructor
 public class Warp implements TeleportDestination {
@@ -24,6 +27,9 @@ public class Warp implements TeleportDestination {
     private Integer cooldown;
     private Integer delay;
 
+    /**
+     * Creates the warp.
+     */
     public Warp(String name, Location location, String permission, String server) {
         this.name = name;
         this.world = location.getWorld().getName();
@@ -37,11 +43,17 @@ public class Warp implements TeleportDestination {
         this.server = server;
     }
 
+    /**
+     * Creates the warp.
+     */
     public Warp(String name, String world, double x, double y, double z, float yaw, float pitch,
                 String permission, long createdAt, String server) {
         this(name, world, x, y, z, yaw, pitch, permission, createdAt, server, null, null, null);
     }
 
+    /**
+     * Creates the warp.
+     */
     public Warp(String name, String world, double x, double y, double z, float yaw, float pitch,
                 String permission, long createdAt, String server,
                 Double cost, Integer cooldown, Integer delay) {
@@ -60,19 +72,31 @@ public class Warp implements TeleportDestination {
         this.delay = delay;
     }
 
+    /**
+     * Returns this as a location.
+     */
     public Location toLocation() {
         World bukkitWorld = Bukkit.getWorld(world);
         return bukkitWorld == null ? null : new Location(bukkitWorld, x, y, z, yaw, pitch);
     }
 
+    /**
+     * Tells whether this warp needs a permission.
+     */
     public boolean hasPermission() {
         return permission != null && !permission.isEmpty();
     }
 
+    /**
+     * Tells whether this warp has its own teleport settings.
+     */
     public boolean hasOverrides() {
         return cost != null || cooldown != null || delay != null;
     }
 
+    /**
+     * Returns a moved copy.
+     */
     public Warp movedTo(Location location, String server) {
         return new Warp(name, location.getWorld().getName(), location.getX(), location.getY(), location.getZ(),
                 location.getYaw(), location.getPitch(), permission, createdAt, server, cost, cooldown, delay);

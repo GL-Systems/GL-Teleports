@@ -4,9 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.Home;
 import org.glstudio.teleports.modules.model.SpawnLocation;
 import org.glstudio.teleports.modules.model.Warp;
@@ -26,16 +26,25 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+/**
+ * Backs up the data on a schedule.
+ */
 public class BackupService {
     private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private final GTeleports plugin;
 
+    /**
+     * Creates the service.
+     */
     public BackupService(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Starts the schedule.
+     */
     public void schedule() {
         if (!plugin.getConfigManager().getMainConfig().getBoolean("backups.enabled", true)) {
             return;
@@ -45,10 +54,13 @@ public class BackupService {
                 plugin.getConfigManager().getMainConfig().getInt("backups.interval-minutes", 360));
         long intervalTicks = intervalMinutes * 60L * 20L;
 
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> Failures.log(run(), "BackupService#scheduled"),
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> Futures.log(run(), "BackupService#scheduled"),
                 20L * 60, intervalTicks);
     }
 
+    /**
+     * Makes a backup now.
+     */
     public void backupNow(CommandSender sender) {
         plugin.getMessages().send(sender, "backup.started");
 

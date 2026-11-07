@@ -1,23 +1,33 @@
 [versions]
-paper = "1.21.8-R0.1-SNAPSHOT"
-nexus = "v1.1.13"
+paper = "1.21.11-R0.1-SNAPSHOT"
+nexus = "v2.0.0"
 jedis = "7.2.0"
-vault = "1.7"
 placeholderapi = "2.12.2"
 hikari = "6.0.0"
 sqlite = "3.45.1.0"
 h2 = "2.2.224"
 mysql = "8.3.0"
 mongodb = "5.1.0"
+postgresql = "42.7.5"
+junit = "5.11.3"
+junit-platform = "1.11.3"
 
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
-nexus = { module = "com.github.7Str1kes:Nexus", version.ref = "nexus" }
+nexus-core = { module = "com.github.7Str1kes.Nexus:nexus-core", version.ref = "nexus" }
+nexus-storage = { module = "com.github.7Str1kes.Nexus:nexus-storage", version.ref = "nexus" }
+nexus-network = { module = "com.github.7Str1kes.Nexus:nexus-network", version.ref = "nexus" }
 jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
-vault-api = { module = "com.github.MilkBowl:VaultAPI", version.ref = "vault" }
 placeholderapi = { module = "me.clip:placeholderapi", version.ref = "placeholderapi" }
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 mysql-connector = { module = "com.mysql:mysql-connector-j", version.ref = "mysql" }
 mongodb-driver-sync = { module = "org.mongodb:mongodb-driver-sync", version.ref = "mongodb" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+
+[plugins]
+shadow = { id = "com.gradleup.shadow", version = "8.3.8" }
+run-paper = { id = "xyz.jpenilla.run-paper", version = "3.0.2" }
+lombok = { id = "io.freefair.lombok", version = "8.14" }

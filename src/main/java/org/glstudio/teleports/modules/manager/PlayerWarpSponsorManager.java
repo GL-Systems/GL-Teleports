@@ -1,9 +1,9 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.common.network.packets.InvalidationScope;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpSponsoredSlot;
 
@@ -22,22 +22,37 @@ public class PlayerWarpSponsorManager {
 
     private volatile CompletableFuture<List<PlayerWarpSponsoredSlot>> cache;
 
+    /**
+     * Creates the manager.
+     */
     public PlayerWarpSponsorManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Tells whether this feature is on.
+     */
     public boolean isEnabled() {
         return plugin.getConfigManager().getPlayerWarpsConfig().getBoolean("sponsored.enabled", true);
     }
 
+    /**
+     * Returns how many slots exist.
+     */
     public int slotCount() {
         return Math.max(0, plugin.getConfigManager().getPlayerWarpsConfig().getInt("sponsored.slots", 5));
     }
 
+    /**
+     * Returns what a slot costs.
+     */
     public double cost() {
         return plugin.getConfigManager().getPlayerWarpsConfig().getDouble("sponsored.cost", 500.0D);
     }
 
+    /**
+     * Returns how long a slot lasts.
+     */
     public int durationHours() {
         return Math.max(1, plugin.getConfigManager().getPlayerWarpsConfig().getInt("sponsored.duration-hours", 24));
     }
@@ -46,6 +61,9 @@ public class PlayerWarpSponsorManager {
         return TimeUnit.HOURS.toMillis(durationHours());
     }
 
+    /**
+     * Returns the active slots.
+     */
     public CompletableFuture<List<PlayerWarpSponsoredSlot>> getActiveSlots() {
         CompletableFuture<List<PlayerWarpSponsoredSlot>> cached = cache;
         if (cached != null) {
@@ -91,6 +109,9 @@ public class PlayerWarpSponsorManager {
         return CompletableFuture.allOf(cleanups.toArray(new CompletableFuture[0])).thenApply(ignored -> active);
     }
 
+    /**
+     * Buys a sponsored slot.
+     */
     public CompletableFuture<Void> sponsor(Player player, int slotIndex, PlayerWarp warp) {
         if (!isEnabled()) {
             plugin.getMessages().send(player, "player-warp.sponsor.disabled");
@@ -146,9 +167,12 @@ public class PlayerWarpSponsorManager {
             });
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpSponsorManager#sponsor", player);
+        return Futures.guard(result, "PlayerWarpSponsorManager#sponsor", player);
     }
 
+    /**
+     * Drops the cache.
+     */
     public void invalidateCache() {
         cache = null;
     }
@@ -164,6 +188,9 @@ public class PlayerWarpSponsorManager {
         plugin.getCrossServerManager().broadcastInvalidation(InvalidationScope.SPONSORED_SLOT, null);
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         cache = null;
     }

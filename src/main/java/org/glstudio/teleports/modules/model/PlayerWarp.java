@@ -9,6 +9,9 @@ import org.bukkit.World;
 
 import java.util.UUID;
 
+/**
+ * A warp owned by a player.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -47,6 +50,9 @@ public class PlayerWarp implements TeleportDestination {
     private long updatedAt;
     private long lastUsedAt;
 
+    /**
+     * Creates the player warp.
+     */
     public PlayerWarp(String id, String name, UUID owner, String ownerName, Location location, String server) {
         this.id = id;
         this.name = name;
@@ -66,27 +72,45 @@ public class PlayerWarp implements TeleportDestination {
         this.lastUsedAt = this.createdAt;
     }
 
+    /**
+     * Returns this as a location.
+     */
     public Location toLocation() {
         World bukkitWorld = Bukkit.getWorld(world);
         return bukkitWorld == null ? null : new Location(bukkitWorld, x, y, z, yaw, pitch);
     }
 
+    /**
+     * Tells whether this warp has a password.
+     */
     public boolean hasPassword() {
         return passwordHash != null && !passwordHash.isEmpty();
     }
 
+    /**
+     * Tells whether entering is free.
+     */
     public boolean isFree() {
         return cost == null || cost <= 0.0D;
     }
 
+    /**
+     * Tells whether a player owns this warp.
+     */
     public boolean isOwner(UUID uuid) {
         return owner != null && owner.equals(uuid);
     }
 
+    /**
+     * Marks this as just changed.
+     */
     public void touch() {
         this.updatedAt = System.currentTimeMillis();
     }
 
+    /**
+     * Marks the used.
+     */
     public void markUsed() {
         this.lastUsedAt = System.currentTimeMillis();
     }

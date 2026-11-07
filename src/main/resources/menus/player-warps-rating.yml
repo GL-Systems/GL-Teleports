@@ -1,3 +1,5 @@
+config-version: 1
+
 # Star picker for /pw rate, reached from a warp's info screen. Picking a star opens a chat
 # prompt for the optional comment, then submits both together.
 #

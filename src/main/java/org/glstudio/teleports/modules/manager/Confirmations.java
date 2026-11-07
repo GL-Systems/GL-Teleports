@@ -6,11 +6,17 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Remembers who has been asked to confirm a dangerous action.
+ */
 public class Confirmations {
     private static final long WINDOW_MILLIS = 15_000L;
 
     private final Map<String, Long> pending = new ConcurrentHashMap<>();
 
+    /**
+     * Tells whether a player has confirmed an action.
+     */
     public boolean confirmed(Player player, String action) {
         String key = key(player.getUniqueId(), action);
         Long asked = pending.remove(key);
@@ -24,6 +30,9 @@ public class Confirmations {
         return false;
     }
 
+    /**
+     * Forgets what is held for a player.
+     */
     public void forget(UUID uuid) {
         String prefix = uuid + ":";
         pending.keySet().removeIf(key -> key.startsWith(prefix));

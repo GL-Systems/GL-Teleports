@@ -1,8 +1,8 @@
 package org.glstudio.teleports.modules.placeholder;
 
-import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.hooks.placeholder.NexusExpansion;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.manager.HomeManager;
 import org.glstudio.teleports.modules.model.TeleportType;
@@ -12,35 +12,22 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Locale;
 
-public class TeleportsExpansion extends PlaceholderExpansion {
+/**
+ * The {@code %glteleports_...%} placeholders.
+ */
+public class TeleportsExpansion extends NexusExpansion {
     private final GTeleports plugin;
 
+    /**
+     * Creates the expansion.
+     */
     public TeleportsExpansion(GTeleports plugin) {
+        super(plugin, "glteleports");
         this.plugin = plugin;
     }
 
     @Override
-    public @NotNull String getIdentifier() {
-        return "glteleports";
-    }
-
-    @Override
-    public @NotNull String getAuthor() {
-        return String.join(", ", plugin.getDescription().getAuthors());
-    }
-
-    @Override
-    public @NotNull String getVersion() {
-        return plugin.getDescription().getVersion();
-    }
-
-    @Override
-    public boolean persist() {
-        return true;
-    }
-
-    @Override
-    public String onRequest(OfflinePlayer offline, @NotNull String params) {
+    protected String fallback(OfflinePlayer offline, @NotNull String params) {
         String key = params.toLowerCase(Locale.ROOT);
 
         switch (key) {

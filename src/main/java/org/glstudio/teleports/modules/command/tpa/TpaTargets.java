@@ -1,7 +1,7 @@
 package org.glstudio.teleports.modules.command.tpa;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.utils.Players;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
 
@@ -15,13 +15,7 @@ final class TpaTargets {
     }
 
     static List<String> suggest(GTeleports plugin, Player sender) {
-        Set<String> names = new LinkedHashSet<>();
-
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (sender.canSee(online)) {
-                names.add(online.getName());
-            }
-        }
+        Set<String> names = new LinkedHashSet<>(Players.visibleNames(sender));
 
         PlayerRegistry registry = plugin.getCrossServerManager().getPlayerRegistry();
         if (registry != null) {

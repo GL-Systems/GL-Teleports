@@ -40,6 +40,14 @@ public class CrossServerTransferEvent extends TeleportEvent implements Cancellab
     @Setter
     private String cancelMessage;
 
+    /**
+     * Creates the event.
+     *
+     * @param player the player
+     * @param type the type
+     * @param targetServer the target server
+     * @param destinationName the destination name
+     */
     public CrossServerTransferEvent(Player player, TeleportType type, String targetServer, String destinationName) {
         super(player, type);
         this.targetServer = targetServer;
@@ -61,6 +69,11 @@ public class CrossServerTransferEvent extends TeleportEvent implements Cancellab
         return HANDLERS;
     }
 
+    /**
+     * Returns the handler list of this event.
+     *
+     * @return the handler list
+     */
     public static HandlerList getHandlerList() {
         return HANDLERS;
     }

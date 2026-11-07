@@ -15,10 +15,14 @@ import java.util.Map;
 public record MigrationOptions(boolean multiServer, String currentServer, String fallbackServer,
                                boolean useSourceServer, ConflictPolicy policy, Map<String, String> worldMappings,
                                long now) {
+    /** Creates the options, copying what it holds. */
     public MigrationOptions {
         worldMappings = Map.copyOf(worldMappings);
     }
 
+    /**
+     * Renames the world of a location as configured.
+     */
     public SourceLocation mapWorld(SourceLocation source) {
         String world = source.world();
         String target = world == null ? null : worldMappings.get(world.toLowerCase(Locale.ROOT));

@@ -1,3 +1,5 @@
+config-version: 1
+
 # The /pw main menu - the hub every other player-warp screen is reached from.
 #
 # Top row: the sponsored slots (see player-warps.yml -> sponsored). SPONSORED_SLOTS must have

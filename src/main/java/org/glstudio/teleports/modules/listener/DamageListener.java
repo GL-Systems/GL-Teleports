@@ -1,25 +1,34 @@
 package org.glstudio.teleports.modules.listener;
 
-import org.glstudio.teleports.GTeleports;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.glstudio.teleports.GTeleports;
 
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Cancels delayed teleports when players take damage.
+ */
 public class DamageListener implements Listener {
     private static final List<String> DEFAULT_IMMUNE_CAUSES =
             List.of("FALL", "SUFFOCATION", "FIRE_TICK", "HOT_FLOOR", "CONTACT", "CRAMMING");
 
     private final GTeleports plugin;
 
+    /**
+     * Creates the listener.
+     */
     public DamageListener(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Handles {@link EntityDamageEvent}.
+     */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onEntityDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player player)) {

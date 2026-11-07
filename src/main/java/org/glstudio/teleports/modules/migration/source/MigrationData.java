@@ -14,6 +14,9 @@ import java.util.List;
 public record MigrationData(String storage, String localServer, List<SourceHome> homes, List<SourceWarp> warps,
                             List<SourceProblem> problems, SourcePlayerWarps playerWarps) {
 
+    /**
+     * Creates the migration data.
+     */
     public MigrationData(String storage, String localServer, List<SourceHome> homes, List<SourceWarp> warps,
                          List<SourceProblem> problems) {
         this(storage, localServer, homes, warps, problems, SourcePlayerWarps.none());

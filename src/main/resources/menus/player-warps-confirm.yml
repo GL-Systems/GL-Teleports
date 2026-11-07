@@ -1,3 +1,5 @@
+config-version: 1
+
 # Asked before teleporting to a player warp that will charge the player. Opens from every way of
 # reaching a warp (/pw <name>, the lists, sponsored slots, the info screen) once the warp's
 # ban/lock/whitelist/password checks have passed. Never shown when nothing would be charged: free

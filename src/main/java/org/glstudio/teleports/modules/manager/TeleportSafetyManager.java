@@ -1,24 +1,33 @@
 package org.glstudio.teleports.modules.manager;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Permissions;
-import org.glstudio.teleports.modules.model.SafetyCheckResult;
-import org.glstudio.teleports.modules.model.TeleportType;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.core.util.Permissions;
+import org.glstudio.teleports.modules.model.SafetyCheckResult;
+import org.glstudio.teleports.modules.model.TeleportType;
 
+/**
+ * Checks that a destination is safe.
+ */
 public class TeleportSafetyManager {
     public static final String BYPASS_PERMISSION = Permissions.BYPASS_SAFETY;
 
     private final GTeleports plugin;
 
+    /**
+     * Creates the manager.
+     */
     public TeleportSafetyManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Returns a safe location near the destination, or the destination.
+     */
     public Location resolve(Player player, Location destination, TeleportType type) {
         if (player != null && player.hasPermission(BYPASS_PERMISSION)) {
             return destination;
@@ -52,6 +61,9 @@ public class TeleportSafetyManager {
         return null;
     }
 
+    /**
+     * Checks whether a location is safe.
+     */
     public SafetyCheckResult checkSafety(Location location, TeleportType type) {
         if (!plugin.getSettings().getBoolean("safety.enabled", true)) {
             return SafetyCheckResult.safe();

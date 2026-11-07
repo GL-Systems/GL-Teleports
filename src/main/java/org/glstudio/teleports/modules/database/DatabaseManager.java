@@ -1,12 +1,15 @@
 package org.glstudio.teleports.modules.database;
 
 import lombok.Getter;
+import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.database.impl.*;
-import org.glstudio.nexus.utils.LoggerUtils;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Picks the storage backend from {@code database.yml} and opens and closes it.
+ */
 public class DatabaseManager {
     private static final long STARTUP_TIMEOUT_SECONDS = 30L;
     private static final long SHUTDOWN_TIMEOUT_SECONDS = 10L;
@@ -15,10 +18,16 @@ public class DatabaseManager {
     @Getter
     private DatabaseProvider provider;
 
+    /**
+     * Creates the manager.
+     */
     public DatabaseManager(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Connects and prepares the storage.
+     */
     public void initialize() {
         DatabaseType type = DatabaseType.fromString(
                 plugin.getConfigManager().getDatabaseConfig().getString("type", "yaml")
@@ -38,6 +47,9 @@ public class DatabaseManager {
         LoggerUtils.logSuccess("Database initialized successfully!");
     }
 
+    /**
+     * Shuts this down.
+     */
     public void shutdown() {
         if (provider != null) {
             LoggerUtils.logInfo("Shutting down database...");

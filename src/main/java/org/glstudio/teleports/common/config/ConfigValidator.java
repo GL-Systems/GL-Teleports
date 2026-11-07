@@ -1,9 +1,9 @@
 package org.glstudio.teleports.common.config;
 
 import org.bukkit.Particle;
-import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.glstudio.nexus.utils.LoggerUtils;
+import org.glstudio.nexus.utils.Registries;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.model.TeleportType;
 
@@ -11,14 +11,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Checks the configuration on startup and reports what is wrong.
+ */
 public class ConfigValidator {
     private final GTeleports plugin;
     private final List<String> problems = new ArrayList<>();
 
+    /**
+     * Creates the config validator.
+     */
     public ConfigValidator(GTeleports plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Checks the configuration and reports what is wrong.
+     */
     public int validate() {
         problems.clear();
 
@@ -135,9 +144,7 @@ public class ConfigValidator {
             return;
         }
 
-        try {
-            Sound.valueOf(value.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
+        if (Registries.sound(value).isEmpty()) {
             problems.add(path + " is '" + value + "', which this server version does not know; "
                     + "that sound will not play.");
         }
@@ -225,6 +232,9 @@ public class ConfigValidator {
         }
     }
 
+    /**
+     * Warns about top-level keys the plugin does not read.
+     */
     public void reportUnknownKeys() {
         ConfigurationSection root = plugin.getConfigManager().getMainConfig().getConfigurationSection("");
         if (root == null) {

@@ -1,20 +1,26 @@
 package org.glstudio.teleports.modules.command.warp;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
-import org.glstudio.teleports.modules.model.Warp;
+import org.bukkit.command.CommandSender;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
-import org.bukkit.command.CommandSender;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.modules.model.Warp;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The {@code /warps} command.
+ */
 public class WarpsCommand extends Command {
     private static final int PAGE_SIZE = 8;
 
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public WarpsCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;
@@ -34,7 +40,7 @@ public class WarpsCommand extends Command {
     public void execute(CommandSender sender, String[] args) {
         int requestedPage = parsePage(args);
 
-        Failures.guard(plugin, plugin.getWarpManager().getWarps().thenAccept(all -> {
+        Futures.guard(plugin.getWarpManager().getWarps().thenAccept(all -> {
             List<Warp> visible = new ArrayList<>();
             for (Warp warp : all) {
                 if (!warp.hasPermission() || sender.hasPermission(warp.getPermission())) {

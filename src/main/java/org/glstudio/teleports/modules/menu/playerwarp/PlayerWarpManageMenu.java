@@ -4,14 +4,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
-import org.glstudio.nexus.utils.CC;
-import org.glstudio.nexus.utils.ConfigFile;
-import org.glstudio.teleports.GTeleports;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.menu.Menu;
 import org.glstudio.nexus.modules.menu.button.Button;
 import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
+import org.glstudio.nexus.modules.menu.config.MenuConfig;
 import org.glstudio.nexus.modules.menu.extra.ConfirmMenu;
-import org.glstudio.teleports.core.util.Failures;
+import org.glstudio.nexus.utils.CC;
+import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.menu.MenuItems;
 import org.glstudio.teleports.modules.model.PlayerWarp;
@@ -20,15 +20,20 @@ import org.glstudio.teleports.modules.model.PlayerWarpCategory;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Menu to change a warp.
+ */
 public class PlayerWarpManageMenu extends Menu {
     private final GTeleports plugin;
     private final PlayerWarp warp;
 
+    /**
+     * Creates the menu.
+     */
     public PlayerWarpManageMenu(GTeleports plugin, Player viewer, PlayerWarp warp) {
         super(plugin.getMenuManager(), viewer,
-                CC.t(MenuItems.apply(MenuItems.string(plugin.getConfigManager().getPlayerWarpsManageMenu(),
-                        "title", "&8Manage: %name%"), "%name%", warp.getName())),
-                MenuItems.integer(plugin.getConfigManager().getPlayerWarpsManageMenu(), "size", 45));
+                CC.t(MenuItems.apply(new MenuConfig(plugin.getConfigManager().getPlayerWarpsManageMenu()).string("title", "&8Manage: %name%"), "%name%", warp.getName())),
+                new MenuConfig(plugin.getConfigManager().getPlayerWarpsManageMenu()).integer("size", 45));
         this.plugin = plugin;
         this.warp = warp;
     }
@@ -42,7 +47,7 @@ public class PlayerWarpManageMenu extends Menu {
     }
 
     private Map<Integer, Button> getButtons(Player viewer) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsManageMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsManageMenu());
         Map<Integer, Button> buttons = new HashMap<>();
 
         Object[] placeholders = {
@@ -64,7 +69,7 @@ public class PlayerWarpManageMenu extends Menu {
 
         put(buttons, cfg, "items.cost", placeholders, event -> {
             if (event.getClick() == ClickType.RIGHT) {
-                Failures.log(plugin.getPlayerWarpManager().setCost(viewer, warp.getName(), null)
+                Futures.log(plugin.getPlayerWarpManager().setCost(viewer, warp.getName(), null)
                         .thenRun(() -> reopen(viewer)), "PlayerWarpManageMenu#removeCost");
                 return;
             }
@@ -72,12 +77,12 @@ public class PlayerWarpManageMenu extends Menu {
         });
 
         put(buttons, cfg, "items.lock", placeholders, event ->
-                Failures.log(plugin.getPlayerWarpManager().setLocked(viewer, warp.getName(), !warp.isLocked())
+                Futures.log(plugin.getPlayerWarpManager().setLocked(viewer, warp.getName(), !warp.isLocked())
                         .thenRun(() -> reopen(viewer)), "PlayerWarpManageMenu#lock"));
 
         put(buttons, cfg, "items.password", placeholders, event -> {
             if (event.getClick() == ClickType.RIGHT) {
-                Failures.log(plugin.getPlayerWarpManager().removePassword(viewer, warp.getName())
+                Futures.log(plugin.getPlayerWarpManager().removePassword(viewer, warp.getName())
                         .thenRun(() -> reopen(viewer)), "PlayerWarpManageMenu#removePassword");
                 return;
             }
@@ -102,11 +107,11 @@ public class PlayerWarpManageMenu extends Menu {
         put(buttons, cfg, "items.reset", placeholders, event -> confirmReset(viewer, placeholders));
         put(buttons, cfg, "items.delete", placeholders, event -> confirmDelete(viewer, placeholders));
 
-        MenuItems.put(buttons, cfg, "items.back",
+        cfg.put(buttons, "items.back",
                 () -> new PlayerWarpListMenu(plugin, viewer, PlayerWarpListMenu.Mode.MINE, null).open());
-        MenuItems.put(buttons, cfg, "items.close", viewer::closeInventory);
+        cfg.put(buttons, "items.close", viewer::closeInventory);
 
-        MenuItems.putExtras(buttons, cfg, "extra");
+        cfg.putExtras(buttons, "extra");
 
         return buttons;
     }
@@ -116,23 +121,23 @@ public class PlayerWarpManageMenu extends Menu {
         return category == null ? "-" : category.displayName();
     }
 
-    private void put(Map<Integer, Button> buttons, ConfigFile cfg, String path, Object[] placeholders,
+    private void put(Map<Integer, Button> buttons, MenuConfig cfg, String path, Object[] placeholders,
                      java.util.function.Consumer<org.bukkit.event.inventory.InventoryClickEvent> onClick) {
-        int slot = MenuItems.slot(cfg, path);
+        int slot = cfg.slot(path);
         if (slot < 0) {
             return;
         }
 
-        ButtonBuilder builder = MenuItems.builder(cfg, path);
-        builder.name(MenuItems.apply(MenuItems.name(cfg, path, "&f?"), placeholders));
-        builder.lore(MenuItems.apply(MenuItems.lore(cfg, path), placeholders));
+        ButtonBuilder builder = cfg.builder(path);
+        builder.name(MenuItems.apply(cfg.name(path, "&f?"), placeholders));
+        builder.lore(MenuItems.apply(cfg.lore(path), placeholders));
         builder.onClick(onClick::accept);
 
         buttons.put(slot, builder.build());
     }
 
     private void reopen(Player viewer) {
-        Failures.log(plugin.getPlayerWarpManager().getWarp(warp.getId()).thenAccept(fresh ->
+        Futures.log(plugin.getPlayerWarpManager().getWarp(warp.getId()).thenAccept(fresh ->
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     if (!viewer.isOnline()) {
                         return;
@@ -147,29 +152,29 @@ public class PlayerWarpManageMenu extends Menu {
 
     private void promptDescription(Player viewer) {
         viewer.closeInventory();
-        plugin.getChatInputManager().request(viewer,
+        plugin.getChatPrompts().request(viewer,
                 MenuItems.prompt(plugin, "player-warp.prompts.description", "{name}", warp.getName()),
-                text -> Failures.log(plugin.getPlayerWarpManager().setDescription(viewer, warp.getName(), text)
+                text -> Futures.log(plugin.getPlayerWarpManager().setDescription(viewer, warp.getName(), text)
                         .thenRun(() -> reopen(viewer)), "PlayerWarpManageMenu#desc"),
                 () -> reopen(viewer));
     }
 
     private void promptIcon(Player viewer) {
         viewer.closeInventory();
-        plugin.getChatInputManager().request(viewer,
+        plugin.getChatPrompts().request(viewer,
                 MenuItems.prompt(plugin, "player-warp.prompts.icon", "{name}", warp.getName()),
-                text -> Failures.log(plugin.getPlayerWarpManager().setIcon(viewer, warp.getName(), text)
+                text -> Futures.log(plugin.getPlayerWarpManager().setIcon(viewer, warp.getName(), text)
                         .thenRun(() -> reopen(viewer)), "PlayerWarpManageMenu#icon"),
                 () -> reopen(viewer));
     }
 
     private void promptCost(Player viewer) {
         viewer.closeInventory();
-        plugin.getChatInputManager().request(viewer,
+        plugin.getChatPrompts().request(viewer,
                 MenuItems.prompt(plugin, "player-warp.prompts.cost", "{name}", warp.getName()), text -> {
             try {
                 double cost = Double.parseDouble(text.trim());
-                Failures.log(plugin.getPlayerWarpManager().setCost(viewer, warp.getName(), cost)
+                Futures.log(plugin.getPlayerWarpManager().setCost(viewer, warp.getName(), cost)
                         .thenRun(() -> reopen(viewer)), "PlayerWarpManageMenu#cost");
             } catch (NumberFormatException e) {
                 plugin.getMessages().send(viewer, "errors.invalid-amount", "{value}", text);
@@ -180,47 +185,47 @@ public class PlayerWarpManageMenu extends Menu {
 
     private void promptPassword(Player viewer) {
         viewer.closeInventory();
-        plugin.getChatInputManager().request(viewer,
+        plugin.getChatPrompts().request(viewer,
                 MenuItems.prompt(plugin, "player-warp.prompts.password", "{name}", warp.getName()),
-                text -> Failures.log(plugin.getPlayerWarpManager().setPassword(viewer, warp.getName(), text)
+                text -> Futures.log(plugin.getPlayerWarpManager().setPassword(viewer, warp.getName(), text)
                         .thenRun(() -> reopen(viewer)), "PlayerWarpManageMenu#password"),
                 () -> reopen(viewer));
     }
 
     private void promptRename(Player viewer) {
         viewer.closeInventory();
-        plugin.getChatInputManager().request(viewer,
+        plugin.getChatPrompts().request(viewer,
                 MenuItems.prompt(plugin, "player-warp.prompts.rename", "{name}", warp.getName()),
-                text -> Failures.log(plugin.getPlayerWarpManager().renameWarp(viewer, warp.getName(), text)
+                text -> Futures.log(plugin.getPlayerWarpManager().renameWarp(viewer, warp.getName(), text)
                         .thenRun(() -> reopen(viewer)), "PlayerWarpManageMenu#rename"),
                 () -> reopen(viewer));
     }
 
     private void confirmReset(Player viewer, Object[] placeholders) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsManageMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsManageMenu());
 
         ConfirmMenu.confirm(plugin.getMenuManager(), viewer,
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-reset.title", "&8Move here?"), placeholders),
+                MenuItems.apply(cfg.string("items.confirm-reset.title", "&8Move here?"), placeholders),
                 new ButtonBuilder().material(Material.COMPASS).name(warp.getName()).build(),
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-reset.accept", "&a&lMOVE"), placeholders),
-                MenuItems.apply(cfg.getStringList("items.confirm-reset.accept-lore"), placeholders),
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-reset.cancel", "&c&lCANCEL"), placeholders),
+                MenuItems.apply(cfg.string("items.confirm-reset.accept", "&a&lMOVE"), placeholders),
+                MenuItems.apply(cfg.file().getStringList("items.confirm-reset.accept-lore"), placeholders),
+                MenuItems.apply(cfg.string("items.confirm-reset.cancel", "&c&lCANCEL"), placeholders),
                 ButtonBuilder.of(Material.GRAY_STAINED_GLASS_PANE).name(" ").toItemStack(),
-                () -> Failures.log(plugin.getPlayerWarpManager().resetLocation(viewer, warp.getName())
+                () -> Futures.log(plugin.getPlayerWarpManager().resetLocation(viewer, warp.getName())
                         .thenRun(() -> reopen(viewer)), "PlayerWarpManageMenu#reset"),
                 () -> reopen(viewer)
         );
     }
 
     private void confirmDelete(Player viewer, Object[] placeholders) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsManageMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsManageMenu());
 
         ConfirmMenu.confirm(plugin.getMenuManager(), viewer,
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-delete.title", "&8Delete?"), placeholders),
+                MenuItems.apply(cfg.string("items.confirm-delete.title", "&8Delete?"), placeholders),
                 new ButtonBuilder().material(Material.GRASS_BLOCK).name(warp.getName()).build(),
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-delete.accept", "&c&lDELETE"), placeholders),
-                MenuItems.apply(cfg.getStringList("items.confirm-delete.accept-lore"), placeholders),
-                MenuItems.apply(MenuItems.string(cfg, "items.confirm-delete.cancel", "&a&lKEEP IT"), placeholders),
+                MenuItems.apply(cfg.string("items.confirm-delete.accept", "&c&lDELETE"), placeholders),
+                MenuItems.apply(cfg.file().getStringList("items.confirm-delete.accept-lore"), placeholders),
+                MenuItems.apply(cfg.string("items.confirm-delete.cancel", "&a&lKEEP IT"), placeholders),
                 ButtonBuilder.of(Material.GRAY_STAINED_GLASS_PANE).name(" ").toItemStack(),
                 () -> plugin.getPlayerWarpManager().removeWarp(viewer, warp.getName())
                         .thenRun(() -> Bukkit.getScheduler().runTask(plugin, () -> viewer.closeInventory())),

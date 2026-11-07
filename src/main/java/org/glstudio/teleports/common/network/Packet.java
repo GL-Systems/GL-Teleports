@@ -1,21 +1,21 @@
 package org.glstudio.teleports.common.network;
 
-import lombok.Getter;
+import org.glstudio.nexus.network.AbstractPacket;
 
-import java.util.UUID;
+/**
+ * Base of the Redis packets: identity and freshness come from Nexus.
+ */
+public abstract class Packet extends AbstractPacket {
 
-@Getter
-public abstract class Packet {
-    private final UUID packetId = UUID.randomUUID();
-    private final long sentAt = System.currentTimeMillis();
-
+    /**
+     * Returns the type of this packet.
+     *
+     * @return the type
+     */
     public abstract PacketType getType();
 
-    public String destinationServer() {
-        return null;
-    }
-
-    public boolean isFresh(long toleranceMillis) {
-        return Math.abs(System.currentTimeMillis() - sentAt) <= toleranceMillis;
+    @Override
+    public final String type() {
+        return getType().name();
     }
 }

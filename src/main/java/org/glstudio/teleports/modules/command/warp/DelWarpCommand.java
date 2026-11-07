@@ -1,18 +1,24 @@
 package org.glstudio.teleports.modules.command.warp;
 
-import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.modules.model.Warp;
-import org.glstudio.nexus.modules.command.Command;
-import org.glstudio.nexus.modules.command.CommandManager;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.modules.command.Command;
+import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.teleports.GTeleports;
+import org.glstudio.teleports.modules.model.Warp;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The {@code /delwarp} command.
+ */
 public class DelWarpCommand extends Command {
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public DelWarpCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;

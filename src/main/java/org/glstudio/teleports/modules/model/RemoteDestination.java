@@ -3,6 +3,9 @@ package org.glstudio.teleports.modules.model;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+/**
+ * A destination on another server.
+ */
 @Data
 @AllArgsConstructor
 public class RemoteDestination implements TeleportDestination {

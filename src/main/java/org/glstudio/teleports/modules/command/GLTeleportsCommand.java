@@ -3,35 +3,34 @@ package org.glstudio.teleports.modules.command;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
-import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Diagnostics;
-import org.glstudio.teleports.core.util.Failures;
-import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
 import org.glstudio.teleports.common.config.MultiServerSettings;
+import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
+import org.glstudio.teleports.core.ReloadService;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.command.home.HomeAdmin;
+import org.glstudio.teleports.modules.manager.CrossServerManager;
+import org.glstudio.teleports.modules.migration.MigrationSelection;
 import org.glstudio.teleports.modules.model.DestinationLock;
 import org.glstudio.teleports.modules.model.TeleportRecord;
 import org.glstudio.teleports.modules.model.TeleportType;
-import org.glstudio.teleports.modules.manager.CrossServerManager;
-import org.glstudio.teleports.modules.migration.MigrationSelection;
 
-import java.io.File;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * The admin command {@code /glteleports}.
+ */
 public class GLTeleportsCommand extends Command {
-    private static final List<String> CONFIG_FILES = List.of("config.yml", "language.yml", "database.yml");
-
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public GLTeleportsCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;
@@ -55,7 +54,7 @@ public class GLTeleportsCommand extends Command {
         }
 
         switch (args[0].toLowerCase()) {
-            case "reload" -> ifPermitted(sender, Permissions.ADMIN_RELOAD, () -> reload(sender));
+            case "reload" -> ifPermitted(sender, Permissions.ADMIN_RELOAD, () -> new ReloadService(plugin).reload(sender));
             case "backup" -> ifPermitted(sender, Permissions.ADMIN_BACKUP,
                     () -> plugin.getBackupService().backupNow(sender));
             case "status" -> ifPermitted(sender, Permissions.ADMIN_RELOAD, () -> status(sender));
@@ -97,7 +96,7 @@ public class GLTeleportsCommand extends Command {
             return;
         }
 
-        Failures.guard(plugin, HomeAdmin.resolve(plugin, subject).thenAccept(owner -> {
+        Futures.guard(HomeAdmin.resolve(plugin, subject).thenAccept(owner -> {
             if (owner == null) {
                 plugin.getMessages().send(sender, "errors.player-never-played", "{player}", subject);
                 return;
@@ -120,7 +119,7 @@ public class GLTeleportsCommand extends Command {
 
     private void show(CommandSender sender, String subject,
                       java.util.concurrent.CompletableFuture<List<TeleportRecord>> lookup) {
-        Failures.guard(plugin, lookup.thenAccept(records -> {
+        Futures.guard(lookup.thenAccept(records -> {
             if (records.isEmpty()) {
                 plugin.getMessages().send(sender, "history.empty", "{subject}", subject);
                 return;
@@ -302,65 +301,6 @@ public class GLTeleportsCommand extends Command {
                 "{count}", String.valueOf(registry.networkPlayerNames().size()));
         plugin.getMessages().send(sender, "status.pending",
                 "{count}", String.valueOf(crossServer.getPendingTeleports().size()));
-    }
-
-    private void reload(CommandSender sender) {
-        String broken = firstBrokenFile();
-        if (broken != null) {
-            plugin.getMessages().send(sender, "reload.invalid", "{error}", broken);
-            return;
-        }
-
-        MultiServerSettings before = plugin.getMultiServerSettings();
-        String databaseBefore = plugin.getConfigManager().getDatabaseConfig().saveToString();
-
-        try {
-            plugin.getConfigManager().reload();
-        } catch (Exception e) {
-            LoggerUtils.logException("GLTeleportsCommand#reload", e);
-            plugin.getMessages().send(sender, "reload.invalid", "{error}", String.valueOf(e.getMessage()));
-            return;
-        }
-
-        plugin.getMessages().reset();
-        plugin.getSettings().reset();
-        plugin.getMessages().applyToNexus();
-
-        Failures.log(plugin.getDatabaseManager().getProvider().reload(), "GLTeleportsCommand#reloadProvider");
-        plugin.getWarpManager().invalidateCache();
-        plugin.getSpawnManager().invalidateCache();
-        plugin.getHomeManager().invalidate(null);
-        plugin.getPlayerWarpManager().invalidateCache();
-        plugin.getPlayerWarpSponsorManager().invalidateCache();
-        plugin.getPlayerWarpCategoryRegistry().load();
-
-        plugin.getMessages().send(sender, "reload.success");
-        LoggerUtils.logInfo(sender.getName() + " reloaded the configuration.");
-
-        MultiServerSettings after = new MultiServerSettings(plugin.getConfigManager().getMainConfig());
-        if (before != null && before.differsFrom(after)) {
-            plugin.getMessages().send(sender, "reload.restart-required", "{section}", "multi-server");
-        }
-
-        if (!databaseBefore.equals(plugin.getConfigManager().getDatabaseConfig().saveToString())) {
-            plugin.getMessages().send(sender, "reload.restart-required", "{section}", "database.yml");
-        }
-    }
-
-    private String firstBrokenFile() {
-        for (String name : CONFIG_FILES) {
-            File file = new File(plugin.getDataFolder(), name);
-            if (!file.exists()) {
-                continue;
-            }
-
-            try {
-                new YamlConfiguration().load(file);
-            } catch (IOException | InvalidConfigurationException e) {
-                return name + " (" + Diagnostics.describeRootCause(e) + ")";
-            }
-        }
-        return null;
     }
 
     @Override

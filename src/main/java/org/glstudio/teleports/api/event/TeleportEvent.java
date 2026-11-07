@@ -21,6 +21,12 @@ public abstract class TeleportEvent extends PlayerEvent {
     /** Which kind of teleport this is; read it with {@code getType()}. Never {@code null}. */
     private final TeleportType type;
 
+    /**
+     * Creates the event.
+     *
+     * @param player the player
+     * @param type the type
+     */
     protected TeleportEvent(Player player, TeleportType type) {
         super(player);
         this.type = type;

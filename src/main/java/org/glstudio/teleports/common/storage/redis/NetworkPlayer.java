@@ -5,6 +5,9 @@ import lombok.Data;
 
 import java.util.UUID;
 
+/**
+ * A player online somewhere on the network.
+ */
 @Data
 @AllArgsConstructor
 public class NetworkPlayer {

@@ -2,10 +2,10 @@ package org.glstudio.teleports.modules.service;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.utils.ConfigFile;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpPurgeReason;
 
@@ -25,6 +25,9 @@ public class PlayerWarpPurgeService {
     private final GTeleports plugin;
     private org.bukkit.scheduler.BukkitTask task;
 
+    /**
+     * Creates the service.
+     */
     public PlayerWarpPurgeService(GTeleports plugin) {
         this.plugin = plugin;
     }
@@ -33,6 +36,9 @@ public class PlayerWarpPurgeService {
         return plugin.getConfigManager().getPlayerWarpsConfig();
     }
 
+    /**
+     * Starts the schedule.
+     */
     public void schedule() {
         if (task != null || !config().getBoolean("purge.enabled", false)) {
             return;
@@ -43,12 +49,15 @@ public class PlayerWarpPurgeService {
         task = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::purgeNow, DELAY_TICKS, periodTicks);
     }
 
+    /**
+     * Purges right now.
+     */
     public void purgeNow() {
         if (!config().getBoolean("purge.enabled", false)) {
             return;
         }
 
-        Failures.log(plugin.getPlayerWarpManager().getWarps().thenCompose(this::purgeMatching),
+        Futures.log(plugin.getPlayerWarpManager().getWarps().thenCompose(this::purgeMatching),
                 "PlayerWarpPurgeService#purgeNow");
     }
 
@@ -118,6 +127,9 @@ public class PlayerWarpPurgeService {
                 || warp.getWorld() == null || warp.getWorld().isBlank();
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         if (task != null) {
             task.cancel();

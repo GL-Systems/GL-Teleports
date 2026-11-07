@@ -5,9 +5,9 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.common.network.packets.InvalidationScope;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.core.util.TeleportNames;
 import org.glstudio.teleports.modules.menu.playerwarp.PlayerWarpConfirmMenu;
@@ -31,6 +31,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+/**
+ * Creates, changes and teleports to player warps.
+ */
 public class PlayerWarpManager {
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -40,13 +43,19 @@ public class PlayerWarpManager {
 
     private final Map<UUID, Set<String>> unlockedPasswords = new ConcurrentHashMap<>();
 
+    /**
+     * Creates the manager.
+     */
     public PlayerWarpManager(GTeleports plugin) {
         this.plugin = plugin;
-        Failures.log(getWarps(), "PlayerWarpManager#preload");
+        Futures.log(getWarps(), "PlayerWarpManager#preload");
     }
 
     // ── Cache & lookup ─────────────────────────────────────────────────────
 
+    /**
+     * Returns the warps.
+     */
     public CompletableFuture<List<PlayerWarp>> getWarps() {
         CompletableFuture<List<PlayerWarp>> cached = warpCache;
         if (cached != null) {
@@ -73,6 +82,9 @@ public class PlayerWarpManager {
         }
     }
 
+    /**
+     * Returns the cached warps.
+     */
     public List<PlayerWarp> getCachedWarps() {
         CompletableFuture<List<PlayerWarp>> cached = warpCache;
 
@@ -80,10 +92,13 @@ public class PlayerWarpManager {
             return cached.join();
         }
 
-        Failures.log(getWarps(), "PlayerWarpManager#warmCache");
+        Futures.log(getWarps(), "PlayerWarpManager#warmCache");
         return List.of();
     }
 
+    /**
+     * Returns the warp.
+     */
     public CompletableFuture<PlayerWarp> getWarp(String id) {
         return getWarps().thenApply(warps -> warps.stream()
                 .filter(warp -> warp.getId().equals(id))
@@ -91,6 +106,9 @@ public class PlayerWarpManager {
                 .orElse(null));
     }
 
+    /**
+     * Returns the warp by name.
+     */
     public CompletableFuture<PlayerWarp> getWarpByName(String name) {
         String normalized = TeleportNames.normalize(name);
         return getWarps().thenApply(warps -> warps.stream()
@@ -99,6 +117,9 @@ public class PlayerWarpManager {
                 .orElse(null));
     }
 
+    /**
+     * Returns the cached warps by owner.
+     */
     public List<PlayerWarp> getCachedWarpsByOwner(UUID owner) {
         List<PlayerWarp> result = new ArrayList<>();
         for (PlayerWarp warp : getCachedWarps()) {
@@ -109,6 +130,9 @@ public class PlayerWarpManager {
         return result;
     }
 
+    /**
+     * Drops the cache.
+     */
     public void invalidateCache() {
         warpCache = null;
     }
@@ -126,6 +150,9 @@ public class PlayerWarpManager {
 
     // ── Ownership / authorization ───────────────────────────────────────────
 
+    /**
+     * Tells whether a player may change a warp.
+     */
     public CompletableFuture<Boolean> mayManage(PlayerWarp warp, CommandSender sender) {
         if (sender.hasPermission(Permissions.PLAYERWARP_ADMIN_REMOVEALL)) {
             return CompletableFuture.completedFuture(true);
@@ -150,10 +177,16 @@ public class PlayerWarpManager {
 
     // ── CRUD ────────────────────────────────────────────────────────────────
 
+    /**
+     * Creates the warp.
+     */
     public CompletableFuture<Void> createWarp(Player player, String name) {
         return createWarpInternal(player, player.getUniqueId(), player.getName(), name, player.getLocation(), true);
     }
 
+    /**
+     * Creates the warp for.
+     */
     public CompletableFuture<Void> createWarpFor(CommandSender staff, PlayerRef owner, String name,
                                                  Location location) {
         return createWarpInternal(staff, owner.uuid(), owner.name(), name, location, false);
@@ -203,9 +236,12 @@ public class PlayerWarpManager {
                     });
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpManager#createWarp", sender);
+        return Futures.guard(result, "PlayerWarpManager#createWarp", sender);
     }
 
+    /**
+     * Removes the warp.
+     */
     public CompletableFuture<Void> removeWarp(CommandSender sender, String name) {
         if (!sender.hasPermission(Permissions.PLAYERWARP_REMOVE)) {
             plugin.getMessages().send(sender, "errors.no-permission");
@@ -230,9 +266,12 @@ public class PlayerWarpManager {
             });
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpManager#removeWarp", sender);
+        return Futures.guard(result, "PlayerWarpManager#removeWarp", sender);
     }
 
+    /**
+     * Removes the all of.
+     */
     public CompletableFuture<Void> removeAllOf(CommandSender sender, UUID owner, String ownerName) {
         CompletableFuture<Void> result = getWarps().thenCompose(all -> {
             List<PlayerWarp> owned = all.stream().filter(w -> w.isOwner(owner)).toList();
@@ -254,7 +293,7 @@ public class PlayerWarpManager {
             });
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpManager#removeAllOf", sender);
+        return Futures.guard(result, "PlayerWarpManager#removeAllOf", sender);
     }
 
     private CompletableFuture<Void> deleteInternal(PlayerWarp warp) {
@@ -262,6 +301,9 @@ public class PlayerWarpManager {
                 .thenRun(this::invalidateEverywhere);
     }
 
+    /**
+     * Renames a warp.
+     */
     public CompletableFuture<Void> renameWarp(CommandSender sender, String currentName, String newName) {
         if (!TeleportNames.isValid(newName)) {
             plugin.getMessages().send(sender, "errors.invalid-name",
@@ -289,9 +331,12 @@ public class PlayerWarpManager {
                     "{old}", oldName, "{new}", normalizedNew));
         }));
 
-        return Failures.guard(plugin, result, "PlayerWarpManager#renameWarp", sender);
+        return Futures.guard(result, "PlayerWarpManager#renameWarp", sender);
     }
 
+    /**
+     * Resets the location.
+     */
     public CompletableFuture<Void> resetLocation(Player player, String name) {
         CompletableFuture<Void> result = mutate(player, name, Permissions.PLAYERWARP_RESET, warp -> {
             Location location = player.getLocation();
@@ -314,9 +359,12 @@ public class PlayerWarpManager {
                     "{name}", warp.getName()));
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpManager#resetLocation", player);
+        return Futures.guard(result, "PlayerWarpManager#resetLocation", player);
     }
 
+    /**
+     * Hands a warp to another player.
+     */
     public CompletableFuture<Void> transferOwner(CommandSender sender, String name, String newOwnerName) {
         if (!sender.hasPermission(Permissions.PLAYERWARP_SETOWNER)) {
             plugin.getMessages().send(sender, "errors.no-permission");
@@ -351,9 +399,12 @@ public class PlayerWarpManager {
             });
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpManager#transferOwner", sender);
+        return Futures.guard(result, "PlayerWarpManager#transferOwner", sender);
     }
 
+    /**
+     * Sets the description.
+     */
     public CompletableFuture<Void> setDescription(CommandSender sender, String name, String description) {
         int maxLength = plugin.getConfigManager().getPlayerWarpsConfig().getInt("description.max-length", 96);
         String trimmed = description == null ? null
@@ -368,6 +419,9 @@ public class PlayerWarpManager {
         });
     }
 
+    /**
+     * Sets the icon.
+     */
     public CompletableFuture<Void> setIcon(CommandSender sender, String name, String materialName) {
         Material material = Material.matchMaterial(materialName == null ? "" : materialName.toUpperCase(Locale.ROOT));
 
@@ -385,6 +439,9 @@ public class PlayerWarpManager {
         });
     }
 
+    /**
+     * Sets the category.
+     */
     public CompletableFuture<Void> setCategory(CommandSender sender, String name, String categoryId) {
         if (categoryId != null && !plugin.getPlayerWarpCategoryRegistry().exists(categoryId)) {
             plugin.getMessages().send(sender, "errors.player-warp-category-not-found", "{category}", categoryId);
@@ -400,6 +457,9 @@ public class PlayerWarpManager {
         });
     }
 
+    /**
+     * Sets the cost.
+     */
     public CompletableFuture<Void> setCost(CommandSender sender, String name, Double cost) {
         if (cost != null && cost < 0) {
             plugin.getMessages().send(sender, "errors.invalid-amount", "{value}", String.valueOf(cost));
@@ -416,6 +476,9 @@ public class PlayerWarpManager {
         });
     }
 
+    /**
+     * Sets the locked.
+     */
     public CompletableFuture<Void> setLocked(CommandSender sender, String name, boolean locked) {
         return mutate(sender, name, Permissions.PLAYERWARP_LOCK, warp -> {
             warp.setLocked(locked);
@@ -425,6 +488,9 @@ public class PlayerWarpManager {
         });
     }
 
+    /**
+     * Sets the password.
+     */
     public CompletableFuture<Void> setPassword(CommandSender sender, String name, String password) {
         int minLength = plugin.getConfigManager().getPlayerWarpsConfig().getInt("password.min-length", 4);
         int maxLength = plugin.getConfigManager().getPlayerWarpsConfig().getInt("password.max-length", 32);
@@ -446,6 +512,9 @@ public class PlayerWarpManager {
         });
     }
 
+    /**
+     * Removes the password.
+     */
     public CompletableFuture<Void> removePassword(CommandSender sender, String name) {
         return mutate(sender, name, Permissions.PLAYERWARP_PASSWORD, warp -> {
             warp.setPasswordHash(null);
@@ -457,6 +526,9 @@ public class PlayerWarpManager {
         });
     }
 
+    /**
+     * Sets the whitelist enabled.
+     */
     public CompletableFuture<Void> setWhitelistEnabled(CommandSender sender, String name, boolean enabled) {
         return mutate(sender, name, Permissions.PLAYERWARP_WHITELIST, warp -> {
             warp.setWhitelistEnabled(enabled);
@@ -490,9 +562,12 @@ public class PlayerWarpManager {
             });
         });
 
-        return Failures.guard(plugin, result, "PlayerWarpManager#mutate", sender);
+        return Futures.guard(result, "PlayerWarpManager#mutate", sender);
     }
 
+    /**
+     * Stores a warp.
+     */
     public CompletableFuture<Void> save(PlayerWarp warp) {
         return plugin.getDatabaseManager().getProvider().savePlayerWarp(warp)
                 .thenRun(this::invalidateEverywhere);
@@ -500,12 +575,18 @@ public class PlayerWarpManager {
 
     // ── Password hashing ────────────────────────────────────────────────────
 
+    /**
+     * Creates a password salt.
+     */
     public static String randomSalt() {
         byte[] bytes = new byte[16];
         RANDOM.nextBytes(bytes);
         return HexFormat.of().formatHex(bytes);
     }
 
+    /**
+     * Hashes a password.
+     */
     public static String hash(String password, String salt) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -517,6 +598,9 @@ public class PlayerWarpManager {
         }
     }
 
+    /**
+     * Checks a warp's password.
+     */
     public static boolean verifyPassword(PlayerWarp warp, String attempt) {
         if (!warp.hasPassword() || attempt == null) {
             return !warp.hasPassword();
@@ -530,14 +614,23 @@ public class PlayerWarpManager {
     // ── Teleport gate pipeline ──────────────────────────────────────────────
 
     private enum GateStatus {
-        NOT_FOUND, BANNED, LOCKED, NOT_WHITELISTED, PASSWORD_REQUIRED, PASSWORD_WRONG, OK
+        NOT_FOUND,
+        BANNED,
+        LOCKED,
+        NOT_WHITELISTED,
+        PASSWORD_REQUIRED,
+        PASSWORD_WRONG,
+        OK
     }
 
     private record TeleportGate(GateStatus status, PlayerWarp warp) {
     }
 
+    /**
+     * Starts a teleport to a warp, with its checks.
+     */
     public void attemptTeleport(Player player, String name, String passwordAttempt) {
-        Failures.log(getWarpByName(name).thenCompose(warp -> {
+        Futures.log(getWarpByName(name).thenCompose(warp -> {
             if (warp == null) {
                 return CompletableFuture.completedFuture(new TeleportGate(GateStatus.NOT_FOUND, null));
             }
@@ -632,11 +725,14 @@ public class PlayerWarpManager {
         }
     }
 
+    /**
+     * Asks a player for a warp's password.
+     */
     public void promptPassword(Player player, PlayerWarp warp, boolean wrongAttempt) {
         plugin.getMessages().send(player, wrongAttempt
                 ? "player-warp.password.wrong" : "player-warp.password.required", "{name}", warp.getName());
 
-        plugin.getChatInputManager().request(player,
+        plugin.getChatPrompts().request(player,
                 plugin.getMessages().raw("player-warp.password.prompt"),
                 attempt -> attemptTeleport(player, warp.getName(), attempt));
     }
@@ -667,7 +763,7 @@ public class PlayerWarpManager {
                 warp.getName(), success -> {
                     if (success) {
                         warp.markUsed();
-                        Failures.log(plugin.getDatabaseManager().getProvider().savePlayerWarp(warp),
+                        Futures.log(plugin.getDatabaseManager().getProvider().savePlayerWarp(warp),
                                 "PlayerWarpManager#markUsed");
                     }
                 });
@@ -683,10 +779,16 @@ public class PlayerWarpManager {
         return plugin.getDatabaseManager().getProvider().findPlayer(name);
     }
 
+    /**
+     * Forgets which warps a player has unlocked.
+     */
     public void forgetPasswordUnlocks(UUID uuid) {
         unlockedPasswords.remove(uuid);
     }
 
+    /**
+     * Stops this on shutdown.
+     */
     public void safeDisable() {
         warpCache = null;
         unlockedPasswords.clear();

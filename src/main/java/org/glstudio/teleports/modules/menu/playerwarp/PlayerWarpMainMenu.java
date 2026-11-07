@@ -3,12 +3,12 @@ package org.glstudio.teleports.modules.menu.playerwarp;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.glstudio.nexus.utils.ConfigFile;
-import org.glstudio.teleports.GTeleports;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.menu.Menu;
 import org.glstudio.nexus.modules.menu.button.Button;
 import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
-import org.glstudio.teleports.core.util.Failures;
+import org.glstudio.nexus.modules.menu.config.MenuConfig;
+import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.modules.menu.MenuItems;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpSponsoredSlot;
@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * The entry menu of player warps.
+ */
 public class PlayerWarpMainMenu extends Menu {
     private record SponsoredEntry(PlayerWarpSponsoredSlot slot, PlayerWarp warp) {
     }
@@ -28,11 +31,13 @@ public class PlayerWarpMainMenu extends Menu {
     private volatile List<SponsoredEntry> sponsoredEntries = List.of();
     private volatile boolean loading = true;
 
+    /**
+     * Creates the menu.
+     */
     public PlayerWarpMainMenu(GTeleports plugin, Player viewer) {
         super(plugin.getMenuManager(), viewer,
-                org.glstudio.nexus.utils.CC.t(MenuItems.string(plugin.getConfigManager().getPlayerWarpsMainMenu(),
-                        "title", "&8Player Warps")),
-                MenuItems.integer(plugin.getConfigManager().getPlayerWarpsMainMenu(), "size", 36));
+                org.glstudio.nexus.utils.CC.t(new MenuConfig(plugin.getConfigManager().getPlayerWarpsMainMenu()).string("title", "&8Player Warps")),
+                new MenuConfig(plugin.getConfigManager().getPlayerWarpsMainMenu()).integer("size", 36));
         this.plugin = plugin;
         setAutoRefresh(true);
         load();
@@ -44,7 +49,7 @@ public class PlayerWarpMainMenu extends Menu {
             return;
         }
 
-        Failures.log(plugin.getPlayerWarpSponsorManager().getActiveSlots().thenCompose(this::resolveEntries)
+        Futures.log(plugin.getPlayerWarpSponsorManager().getActiveSlots().thenCompose(this::resolveEntries)
                 .thenAccept(entries -> {
                     sponsoredEntries = entries;
                     loading = false;
@@ -86,39 +91,39 @@ public class PlayerWarpMainMenu extends Menu {
     }
 
     private Map<Integer, Button> getButtons(Player p) {
-        ConfigFile cfg = plugin.getConfigManager().getPlayerWarpsMainMenu();
+        MenuConfig cfg = new MenuConfig(plugin.getConfigManager().getPlayerWarpsMainMenu());
         Map<Integer, Button> buttons = new HashMap<>();
 
         if (plugin.getPlayerWarpSponsorManager().isEnabled()) {
             putSponsoredSlots(buttons, cfg, p);
         }
 
-        MenuItems.put(buttons, cfg, "items.browse",
+        cfg.put(buttons, "items.browse",
                 () -> new PlayerWarpListMenu(plugin, p, PlayerWarpListMenu.Mode.ALL, null).open());
-        MenuItems.put(buttons, cfg, "items.categories",
+        cfg.put(buttons, "items.categories",
                 () -> new PlayerWarpCategoryMenu(plugin, p, null).open());
-        MenuItems.put(buttons, cfg, "items.favourites",
+        cfg.put(buttons, "items.favourites",
                 () -> new PlayerWarpListMenu(plugin, p, PlayerWarpListMenu.Mode.FAVOURITES, null).open());
-        MenuItems.put(buttons, cfg, "items.my-warps",
+        cfg.put(buttons, "items.my-warps",
                 () -> new PlayerWarpListMenu(plugin, p, PlayerWarpListMenu.Mode.MINE, null).open());
 
-        MenuItems.put(buttons, cfg, "items.search", () -> {
+        cfg.put(buttons, "items.search", () -> {
             p.closeInventory();
-            plugin.getChatInputManager().request(p,
+            plugin.getChatPrompts().request(p,
                     MenuItems.prompt(plugin, "player-warp.prompts.search"),
                     query -> new PlayerWarpListMenu(plugin, p, PlayerWarpListMenu.Mode.SEARCH, query).open(),
                     () -> new PlayerWarpMainMenu(plugin, p).open());
         });
 
-        MenuItems.put(buttons, cfg, "items.close", p::closeInventory);
+        cfg.put(buttons, "items.close", p::closeInventory);
 
-        MenuItems.putExtras(buttons, cfg, "extra");
+        cfg.putExtras(buttons, "extra");
 
         return buttons;
     }
 
-    private void putSponsoredSlots(Map<Integer, Button> buttons, ConfigFile cfg, Player viewer) {
-        List<Integer> guiSlots = MenuItems.intList(cfg, "sponsored-slots");
+    private void putSponsoredSlots(Map<Integer, Button> buttons, MenuConfig cfg, Player viewer) {
+        List<Integer> guiSlots = cfg.intList("sponsored-slots");
         int slotCount = Math.min(guiSlots.size(), plugin.getPlayerWarpSponsorManager().slotCount());
 
         for (int index = 0; index < slotCount; index++) {
@@ -136,16 +141,16 @@ public class PlayerWarpMainMenu extends Menu {
         }
     }
 
-    private Button buildEmptySlot(ConfigFile cfg, Player viewer, int slotIndex) {
+    private Button buildEmptySlot(MenuConfig cfg, Player viewer, int slotIndex) {
         Object[] placeholders = {
                 "%cost%", plugin.getEconomyManager().formatCost(plugin.getPlayerWarpSponsorManager().cost()),
                 "%hours%", plugin.getPlayerWarpSponsorManager().durationHours()
         };
 
-        ButtonBuilder builder = MenuItems.builder(cfg, "items.sponsored-empty");
-        builder.name(MenuItems.apply(MenuItems.name(cfg, "items.sponsored-empty", "&6Sponsored Slot"),
+        ButtonBuilder builder = cfg.builder("items.sponsored-empty");
+        builder.name(MenuItems.apply(cfg.name("items.sponsored-empty", "&6Sponsored Slot"),
                 placeholders));
-        builder.lore(MenuItems.apply(MenuItems.lore(cfg, "items.sponsored-empty"), placeholders));
+        builder.lore(MenuItems.apply(cfg.lore("items.sponsored-empty"), placeholders));
         builder.onClickSimple(() -> {
             viewer.closeInventory();
             new PlayerWarpListMenu(plugin, viewer, PlayerWarpListMenu.Mode.SPONSOR, null, slotIndex).open();
@@ -154,7 +159,7 @@ public class PlayerWarpMainMenu extends Menu {
         return builder.build();
     }
 
-    private Button buildFilledSlot(ConfigFile cfg, Player viewer, SponsoredEntry entry) {
+    private Button buildFilledSlot(MenuConfig cfg, Player viewer, SponsoredEntry entry) {
         PlayerWarp warp = entry.warp();
         long remainingSeconds = entry.slot().remainingSeconds();
         String remaining = (remainingSeconds / 3600) + "h " + ((remainingSeconds % 3600) / 60) + "m";
@@ -169,9 +174,9 @@ public class PlayerWarpMainMenu extends Menu {
                 ? ButtonBuilder.parseMaterial(warp.getIcon(), Material.GOLD_BLOCK, "sponsored slot")
                 : Material.GOLD_BLOCK;
 
-        ButtonBuilder builder = MenuItems.builder(cfg, "items.sponsored-filled").material(material);
-        builder.name(MenuItems.apply(MenuItems.name(cfg, "items.sponsored-filled", "&6%name%"), placeholders));
-        builder.lore(MenuItems.apply(MenuItems.lore(cfg, "items.sponsored-filled"), placeholders));
+        ButtonBuilder builder = cfg.builder("items.sponsored-filled").material(material);
+        builder.name(MenuItems.apply(cfg.name("items.sponsored-filled", "&6%name%"), placeholders));
+        builder.lore(MenuItems.apply(cfg.lore("items.sponsored-filled"), placeholders));
         builder.onClickSimple(() -> {
             viewer.closeInventory();
             plugin.getPlayerWarpManager().attemptTeleport(viewer, warp.getName(), null);

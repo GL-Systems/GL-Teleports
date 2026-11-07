@@ -2,15 +2,15 @@ package org.glstudio.teleports.modules.command.playerwarp;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.modules.command.Command;
 import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.nexus.utils.DurationParser;
 import org.glstudio.teleports.GTeleports;
-import org.glstudio.teleports.core.util.Failures;
 import org.glstudio.teleports.core.util.Permissions;
-import org.glstudio.teleports.modules.menu.playerwarp.PlayerWarpMainMenu;
 import org.glstudio.teleports.modules.menu.playerwarp.PlayerWarpAdminMenu;
+import org.glstudio.teleports.modules.menu.playerwarp.PlayerWarpMainMenu;
 import org.glstudio.teleports.modules.menu.playerwarp.PlayerWarpManageMenu;
-import org.glstudio.teleports.modules.model.PlayerRef;
 import org.glstudio.teleports.modules.model.PlayerWarp;
 import org.glstudio.teleports.modules.model.PlayerWarpBan;
 import org.glstudio.teleports.modules.model.PlayerWarpCategory;
@@ -18,18 +18,25 @@ import org.glstudio.teleports.modules.model.PlayerWarpManagerEntry;
 import org.glstudio.teleports.modules.model.PlayerWarpWhitelistEntry;
 
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * The player warp command and its sub-commands.
+ */
 public class PlayerWarpCommand extends Command {
     private static final int PAGE_SIZE = 8;
     private static final long INVALID_DURATION = -1L;
 
     private final GTeleports plugin;
 
+    /**
+     * Creates the command.
+     */
     public PlayerWarpCommand(CommandManager manager, String name, String permission, GTeleports plugin) {
         super(manager, name, permission);
         this.plugin = plugin;
@@ -141,7 +148,7 @@ public class PlayerWarpCommand extends Command {
             return;
         }
 
-        Failures.guard(plugin, plugin.getPlayerWarpManager().getWarpByName(args[1]).thenAccept(warp -> {
+        Futures.guard(plugin.getPlayerWarpManager().getWarpByName(args[1]).thenAccept(warp -> {
             if (warp == null) {
                 plugin.getMessages().send(sender, "errors.player-warp-not-found", "{name}", args[1]);
                 return;
@@ -193,7 +200,7 @@ public class PlayerWarpCommand extends Command {
                 return;
             }
 
-            Failures.guard(plugin, PlayerWarpAdmin.resolve(plugin, args[2]).thenAccept(target -> {
+            Futures.guard(PlayerWarpAdmin.resolve(plugin, args[2]).thenAccept(target -> {
                 if (target == null) {
                     plugin.getMessages().send(sender, "errors.player-not-found", "{player}", args[2]);
                     return;
@@ -226,7 +233,7 @@ public class PlayerWarpCommand extends Command {
             return;
         }
 
-        Failures.guard(plugin, PlayerWarpAdmin.resolve(plugin, args[1]).thenAccept(target -> {
+        Futures.guard(PlayerWarpAdmin.resolve(plugin, args[1]).thenAccept(target -> {
             if (target == null) {
                 plugin.getMessages().send(sender, "errors.player-not-found", "{player}", args[1]);
                 return;
@@ -352,7 +359,7 @@ public class PlayerWarpCommand extends Command {
 
         String comment = args.length > 3 ? String.join(" ", java.util.Arrays.copyOfRange(args, 3, args.length)) : "";
 
-        Failures.guard(plugin, plugin.getPlayerWarpManager().getWarpByName(args[1]).thenAccept(warp -> {
+        Futures.guard(plugin.getPlayerWarpManager().getWarpByName(args[1]).thenAccept(warp -> {
             if (warp == null) {
                 plugin.getMessages().send(sender, "errors.player-warp-not-found", "{name}", args[1]);
                 return;
@@ -371,7 +378,7 @@ public class PlayerWarpCommand extends Command {
             return;
         }
 
-        Failures.guard(plugin, plugin.getPlayerWarpManager().getWarpByName(args[1]).thenAccept(warp -> {
+        Futures.guard(plugin.getPlayerWarpManager().getWarpByName(args[1]).thenAccept(warp -> {
             if (warp == null) {
                 plugin.getMessages().send(sender, "errors.player-warp-not-found", "{name}", args[1]);
                 return;
@@ -475,7 +482,7 @@ public class PlayerWarpCommand extends Command {
                 withWarp(sender, warpName, warp ->
                         plugin.getPlayerWarpWhitelistManager().remove(sender, warp, args[3]));
             }
-            case "list" -> Failures.guard(plugin, plugin.getPlayerWarpManager().getWarpByName(warpName)
+            case "list" -> Futures.guard(plugin.getPlayerWarpManager().getWarpByName(warpName)
                     .thenCompose(warp -> {
                         if (warp == null) {
                             plugin.getMessages().send(sender, "errors.player-warp-not-found", "{name}", warpName);
@@ -547,7 +554,7 @@ public class PlayerWarpCommand extends Command {
                 withWarp(sender, warpName, warp ->
                         plugin.getPlayerWarpBanManager().remove(sender, warp, args[3]));
             }
-            case "list" -> Failures.guard(plugin, plugin.getPlayerWarpManager().getWarpByName(warpName)
+            case "list" -> Futures.guard(plugin.getPlayerWarpManager().getWarpByName(warpName)
                     .thenCompose(warp -> {
                         if (warp == null) {
                             plugin.getMessages().send(sender, "errors.player-warp-not-found", "{name}", warpName);
@@ -608,7 +615,7 @@ public class PlayerWarpCommand extends Command {
                 withWarp(sender, warpName, warp ->
                         plugin.getPlayerWarpManagerRoleManager().remove(sender, warp, args[3]));
             }
-            case "list" -> Failures.guard(plugin, plugin.getPlayerWarpManager().getWarpByName(warpName)
+            case "list" -> Futures.guard(plugin.getPlayerWarpManager().getWarpByName(warpName)
                     .thenCompose(warp -> {
                         if (warp == null) {
                             plugin.getMessages().send(sender, "errors.player-warp-not-found", "{name}", warpName);
@@ -646,7 +653,7 @@ public class PlayerWarpCommand extends Command {
             return;
         }
 
-        Failures.guard(plugin, plugin.getPlayerWarpManager().getWarpByName(args[1]).thenAccept(warp -> {
+        Futures.guard(plugin.getPlayerWarpManager().getWarpByName(args[1]).thenAccept(warp -> {
             if (warp == null) {
                 plugin.getMessages().send(sender, "errors.player-warp-not-found", "{name}", args[1]);
                 return;
@@ -673,7 +680,7 @@ public class PlayerWarpCommand extends Command {
         String finalOwnerFilter = ownerFilter;
         int finalPage = page;
 
-        Failures.guard(plugin, plugin.getPlayerWarpManager().getWarps().thenAccept(all -> {
+        Futures.guard(plugin.getPlayerWarpManager().getWarps().thenAccept(all -> {
             List<PlayerWarp> visible = new ArrayList<>();
             for (PlayerWarp warp : all) {
                 if (finalOwnerFilter == null || finalOwnerFilter.equalsIgnoreCase(warp.getOwnerName())) {
@@ -720,7 +727,7 @@ public class PlayerWarpCommand extends Command {
     // ── helpers ─────────────────────────────────────────────────────────────
 
     private void withWarp(CommandSender sender, String name, java.util.function.Consumer<PlayerWarp> action) {
-        Failures.guard(plugin, plugin.getPlayerWarpManager().getWarpByName(name).thenAccept(warp -> {
+        Futures.guard(plugin.getPlayerWarpManager().getWarpByName(name).thenAccept(warp -> {
             if (warp == null) {
                 plugin.getMessages().send(sender, "errors.player-warp-not-found", "{name}", name);
                 return;
@@ -730,29 +737,8 @@ public class PlayerWarpCommand extends Command {
     }
 
     private static long parseSeconds(String input) {
-        if (input == null || input.isBlank()) {
-            return INVALID_DURATION;
-        }
-
-        String trimmed = input.trim().toLowerCase(Locale.ROOT);
-        char last = trimmed.charAt(trimmed.length() - 1);
-
-        long multiplier = switch (last) {
-            case 's' -> 1L;
-            case 'm' -> 60L;
-            case 'h' -> 3600L;
-            case 'd' -> 86400L;
-            default -> 0L;
-        };
-
-        String number = multiplier == 0L ? trimmed : trimmed.substring(0, trimmed.length() - 1);
-
-        try {
-            long value = Long.parseLong(number);
-            return value <= 0 ? INVALID_DURATION : value * (multiplier == 0L ? 1L : multiplier);
-        } catch (NumberFormatException e) {
-            return INVALID_DURATION;
-        }
+        return DurationParser.tryParse(input, true).map(Duration::toSeconds).filter(seconds -> seconds > 0)
+                .orElse(INVALID_DURATION);
     }
 
     // ── tab completion ──────────────────────────────────────────────────────
