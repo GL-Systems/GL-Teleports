@@ -59,6 +59,13 @@ public class CrossServerManager {
     private final Map<UUID, PendingTeleport> pendingTeleports = new ConcurrentHashMap<>();
 
     private final Set<UUID> arrivalsPending = ConcurrentHashMap.newKeySet();
+    // Arrival work for players who joined dead, run once they are alive (see whenAlive).
+    private final Map<UUID, Runnable> afterRevival = new ConcurrentHashMap<>();
+
+    // Players who just arrived and might still get their last location restored, and those of them
+    // that another plugin (an RTP, say) has already teleported somewhere (see watchArrival).
+    private final Set<UUID> watchingArrival = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> movedOnArrival = ConcurrentHashMap.newKeySet();
 
     private final Map<UUID, ScheduledFuture<?>> pendingStores = new ConcurrentHashMap<>();
 
@@ -430,7 +437,81 @@ public class CrossServerManager {
         awaitPendingOrRestore(player);
     }
 
+    /**
+     * Runs {@code action} now, or once the player is alive again if they are dead.
+     *
+     * A player can join a server dead when that server's own player file is stale (player data saving
+     * disabled). A dead player cannot be teleported, so placing them now would fail silently and
+     * leave them wherever that old file put them - usually where they died.
+     */
+    private void whenAlive(Player player, Runnable action) {
+        if (!player.isDead()) {
+            action.run();
+            return;
+        }
+        afterRevival.put(player.getUniqueId(), action);
+    }
+
+    /**
+     * Runs the arrival that was waiting for the player to be alive, if any.
+     *
+     * @param player the revived player
+     */
+    public void runAfterRevival(Player player) {
+        Runnable action = afterRevival.remove(player.getUniqueId());
+        if (action != null && player.isOnline() && !player.isDead()) {
+            action.run();
+        }
+    }
+
+    /**
+     * Drops the arrival that was waiting for the player to be alive.
+     *
+     * @param uuid the player
+     */
+    public void discardAfterRevival(UUID uuid) {
+        afterRevival.remove(uuid);
+    }
+
+    /**
+     * Starts watching a joining player for teleports by other plugins. A plugin that places arriving
+     * players itself (an RTP sending them to a random spot, for one) has given them a destination, so
+     * restoring their last location afterwards would undo it.
+     *
+     * @param uuid the joining player
+     */
+    public void watchArrival(UUID uuid) {
+        movedOnArrival.remove(uuid);
+        watchingArrival.add(uuid);
+    }
+
+    /**
+     * Records that the player was teleported by a plugin or command while being watched.
+     *
+     * @param uuid the player
+     */
+    public void noteTeleport(UUID uuid) {
+        if (watchingArrival.contains(uuid)) {
+            movedOnArrival.add(uuid);
+        }
+    }
+
+    /**
+     * Stops watching {@code uuid}.
+     *
+     * @param uuid the player
+     * @return {@code true} if another plugin teleported them since they arrived
+     */
+    public boolean finishArrivalWatch(UUID uuid) {
+        watchingArrival.remove(uuid);
+        return movedOnArrival.remove(uuid);
+    }
+
     private void finishPlacedArrival(Player player, PendingTeleport pending) {
+        whenAlive(player, () -> completePlacedArrival(player, pending));
+    }
+
+    private void completePlacedArrival(Player player, PendingTeleport pending) {
         Location target = pending.getResolved();
 
         plugin.getTeleportManager().completePlacedArrival(player, target, pending.getType(),
@@ -449,7 +530,8 @@ public class CrossServerManager {
                     }
 
                     if (player.isOnline() && plugin.getLastLocationManager() != null) {
-                        plugin.getLastLocationManager().restore(player);
+                        boolean revived = player.isDead();
+                        whenAlive(player, () -> plugin.getLastLocationManager().restore(player, revived));
                     }
                 }, arrivalGraceTicks())));
     }
@@ -487,6 +569,9 @@ public class CrossServerManager {
     public void forget(UUID uuid) {
         pendingTeleports.remove(uuid);
         arrivalsPending.remove(uuid);
+        afterRevival.remove(uuid);
+        watchingArrival.remove(uuid);
+        movedOnArrival.remove(uuid);
 
         ScheduledFuture<?> scheduled = pendingStores.remove(uuid);
         if (scheduled != null) {
@@ -517,6 +602,11 @@ public class CrossServerManager {
 
     private void placeOnArrival(Player player, Location location, PendingTeleport pending) {
         if (!player.isOnline()) {
+            return;
+        }
+
+        if (player.isDead()) {
+            whenAlive(player, () -> placeOnArrival(player, location, pending));
             return;
         }
 
@@ -646,5 +736,8 @@ public class CrossServerManager {
         pendingStores.clear();
         pendingTeleports.clear();
         arrivalsPending.clear();
+        afterRevival.clear();
+        watchingArrival.clear();
+        movedOnArrival.clear();
     }
 }

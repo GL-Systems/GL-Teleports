@@ -26,6 +26,8 @@ public class LoginPlacementListener implements Listener {
      */
     @EventHandler(priority = EventPriority.HIGH)
     public void onSpawnLocation(PlayerSpawnLocationEvent event) {
+        plugin.getCrossServerManager().watchArrival(event.getPlayer().getUniqueId());
+
         Location destination = plugin.getCrossServerManager().placeAtLogin(event.getPlayer());
 
         if (destination == null) {

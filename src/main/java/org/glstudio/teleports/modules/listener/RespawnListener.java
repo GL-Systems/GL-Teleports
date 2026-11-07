@@ -16,6 +16,11 @@ import org.glstudio.teleports.modules.model.SpawnLocation;
  * Sends players to their respawn point.
  */
 public class RespawnListener implements Listener {
+    // Set by GL-Sync while it revives a player whose stale player file on this server says they are dead.
+    private static final String GLSYNC_REVIVE_METADATA = "glsync-revive";
+
+    private static final long REVIVAL_ARRIVAL_DELAY_TICKS = 5L;
+
     private final GTeleports plugin;
 
     private boolean warnedAboutMissingSpawn;
@@ -32,6 +37,29 @@ public class RespawnListener implements Listener {
      */
     @EventHandler(priority = EventPriority.NORMAL)
     public void onRespawn(PlayerRespawnEvent event) {
+        Player player = event.getPlayer();
+
+        // A revival is not a death: the player is alive on the network and was arriving here, so
+        // finish that arrival (their teleport or last location) instead of sending them to spawn.
+        if (player.hasMetadata(GLSYNC_REVIVE_METADATA)) {
+            // A few ticks, so a plugin that finishes its own arrival on respawn (an RTP) goes first
+            // and a last-location restore can see it and stay out of the way.
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (player.isOnline()) {
+                    plugin.getCrossServerManager().runAfterRevival(player);
+                }
+            }, REVIVAL_ARRIVAL_DELAY_TICKS);
+            return;
+        }
+
+        // A real respawn wins over an arrival that was waiting for the player to be alive.
+        plugin.getCrossServerManager().discardAfterRevival(player.getUniqueId());
+
+        // Leaving the End fires this event too; that is not a death.
+        if (event.getRespawnReason() == PlayerRespawnEvent.RespawnReason.END_PORTAL) {
+            return;
+        }
+
         if (!plugin.getSettings().getBoolean("spawn.respawn-at-spawn", false)) {
             return;
         }
@@ -41,7 +69,6 @@ public class RespawnListener implements Listener {
             return;
         }
 
-        Player player = event.getPlayer();
         BedRespawnManager bedRespawn = plugin.getBedRespawnManager();
 
         if (bedRespawn.isEnabled() && !bedRespawn.isBedRespawnServer()) {

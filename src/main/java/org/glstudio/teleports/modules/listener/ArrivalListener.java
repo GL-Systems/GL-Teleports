@@ -5,6 +5,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.glstudio.teleports.GTeleports;
 
 /**
@@ -18,6 +19,17 @@ public class ArrivalListener implements Listener {
      */
     public ArrivalListener(GTeleports plugin) {
         this.plugin = plugin;
+    }
+
+    /**
+     * Notes a teleport by a plugin or command, which right after arriving means someone else placed the player.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent event) {
+        PlayerTeleportEvent.TeleportCause cause = event.getCause();
+        if (cause == PlayerTeleportEvent.TeleportCause.PLUGIN || cause == PlayerTeleportEvent.TeleportCause.COMMAND) {
+            plugin.getCrossServerManager().noteTeleport(event.getPlayer().getUniqueId());
+        }
     }
 
     /**
