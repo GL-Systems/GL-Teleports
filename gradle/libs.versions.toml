@@ -1,6 +1,6 @@
 [versions]
 paper = "1.21.11-R0.1-SNAPSHOT"
-nexus = "v2.0.0"
+nexus = "v2.1.0"
 jedis = "7.2.0"
 placeholderapi = "2.12.2"
 hikari = "6.0.0"

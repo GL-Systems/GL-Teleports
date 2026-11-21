@@ -1,17 +1,18 @@
 package org.glstudio.teleports.modules.manager;
 
 import org.bukkit.entity.Player;
+import org.glstudio.nexus.utils.Cooldowns;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.core.util.Permissions;
 import org.glstudio.teleports.modules.model.TeleportRules;
 import org.glstudio.teleports.modules.model.TeleportType;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Holds teleport cooldowns.
@@ -20,7 +21,7 @@ public class CooldownManager {
     public static final String BYPASS_PERMISSION = Permissions.BYPASS_COOLDOWN;
 
     private final GTeleports plugin;
-    private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
+    private final Cooldowns cooldowns = new Cooldowns();
 
     /**
      * Creates the manager.
@@ -48,19 +49,7 @@ public class CooldownManager {
         if (player.hasPermission(BYPASS_PERMISSION)) {
             return 0;
         }
-
-        Long end = cooldowns.get(key(player.getUniqueId(), type));
-        if (end == null) {
-            return 0;
-        }
-
-        long remaining = end - System.currentTimeMillis();
-        if (remaining <= 0) {
-            cooldowns.remove(key(player.getUniqueId(), type), end);
-            return 0;
-        }
-
-        return remaining;
+        return cooldowns.remainingMillis(player.getUniqueId(), type.name());
     }
 
     /**
@@ -78,7 +67,7 @@ public class CooldownManager {
             return;
         }
 
-        cooldowns.put(key(player.getUniqueId(), type), System.currentTimeMillis() + (seconds * 1000L));
+        cooldowns.start(player.getUniqueId(), type.name(), Duration.ofSeconds(seconds));
         publish(player.getUniqueId(), type, seconds);
     }
 
@@ -86,7 +75,7 @@ public class CooldownManager {
      * Removes the cooldown.
      */
     public void removeCooldown(Player player, TeleportType type) {
-        cooldowns.remove(key(player.getUniqueId(), type));
+        cooldowns.clear(player.getUniqueId(), type.name());
         withRedis(redis -> redis.delete(redisKey(player.getUniqueId(), type)));
     }
 
@@ -101,8 +90,7 @@ public class CooldownManager {
      * Forgets what is held for a player.
      */
     public void forget(UUID uuid) {
-        String prefix = uuid + ":";
-        cooldowns.keySet().removeIf(key -> key.startsWith(prefix));
+        cooldowns.forget(uuid);
     }
 
     /**
@@ -130,7 +118,7 @@ public class CooldownManager {
                 for (TeleportType type : TeleportType.values()) {
                     Long ttl = found.get(redisKey(uuid, type));
                     if (ttl != null && ttl > 0) {
-                        cooldowns.put(key(uuid, type), System.currentTimeMillis() + (ttl * 1000L));
+                        cooldowns.start(uuid, type.name(), Duration.ofSeconds(ttl));
                     }
                 }
             } catch (Exception e) {
@@ -173,10 +161,6 @@ public class CooldownManager {
         String channel = plugin.getMultiServerSettings() == null
                 ? "gl-teleports" : plugin.getMultiServerSettings().getChannel();
         return channel + ":cd:" + uuid + ":" + type.name();
-    }
-
-    private static String key(UUID uuid, TeleportType type) {
-        return uuid + ":" + type.name();
     }
 
     /**

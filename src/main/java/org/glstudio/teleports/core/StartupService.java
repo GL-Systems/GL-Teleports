@@ -6,6 +6,7 @@ import org.glstudio.nexus.api.NexusAPI;
 import org.glstudio.nexus.concurrent.Futures;
 import org.glstudio.nexus.concurrent.NexusExecutors;
 import org.glstudio.nexus.hooks.placeholder.PlaceholderHooks;
+import org.glstudio.nexus.lifecycle.Steps;
 import org.glstudio.nexus.modules.command.CommandManager;
 import org.glstudio.nexus.modules.lang.LanguageFile;
 import org.glstudio.nexus.proxy.ProxyMessenger;
@@ -100,6 +101,8 @@ import java.util.concurrent.TimeUnit;
  * Starts the plugin and keeps what enabling multi-server support later needs.
  */
 public class StartupService {
+
+    private static final Steps STEPS = Steps.of("StartupService");
     private static final int CONFIG_VERSION = 1;
 
     private static final long REDIS_STARTUP_TIMEOUT_SECONDS = 15L;
@@ -147,7 +150,7 @@ public class StartupService {
     }
 
     private boolean loadConfigs() {
-        try {
+        return STEPS.run("loadConfigs", () -> {
             ConfigManager configs = new ConfigManager(plugin);
             plugin.setConfigManager(configs);
             plugin.setMessages(new LanguageFile(configs.getLanguageConfig(), TextFormat.MINIMESSAGE).prefixPath("prefix"));
@@ -168,10 +171,7 @@ public class StartupService {
 
             LoggerUtils.logSuccess("Configs loaded.");
             return true;
-        } catch (Exception e) {
-            Diagnostics.logFailure("StartupService#loadConfigs", e);
-            return false;
-        }
+        });
     }
 
     private void reportLegacyKeys() {
@@ -182,7 +182,7 @@ public class StartupService {
     }
 
     private boolean loadExecutors() {
-        try {
+        return STEPS.run("loadExecutors", () -> {
             int poolSize = plugin.getConfigManager().getDatabaseConfig().getInt("mysql.pool-size", 10);
             plugin.setExecutors(NexusExecutors.builder(plugin.getName())
                     .ioThreads(Math.max(2, poolSize))
@@ -190,22 +190,16 @@ public class StartupService {
                     .build());
             plugin.setMultiServerSupervisor(new MultiServerSupervisor(plugin));
             return true;
-        } catch (Exception e) {
-            Diagnostics.logFailure("StartupService#loadExecutors", e);
-            return false;
-        }
+        });
     }
 
     private boolean loadDatabase() {
-        try {
+        return STEPS.run("loadDatabase", () -> {
             DatabaseManager databaseManager = new DatabaseManager(plugin);
             databaseManager.initialize();
             plugin.setDatabaseManager(databaseManager);
             return true;
-        } catch (Exception e) {
-            Diagnostics.logFailure("StartupService#loadDatabase", e);
-            return false;
-        }
+        });
     }
 
     private boolean loadMultiServer() {
@@ -312,7 +306,7 @@ public class StartupService {
     }
 
     private boolean loadManagers() {
-        try {
+        return STEPS.run("loadManagers", () -> {
             plugin.setEconomyManager(new EconomyManager(plugin));
             plugin.setCooldownManager(new CooldownManager(plugin));
             plugin.setDelayManager(new DelayManager(plugin));
@@ -369,10 +363,7 @@ public class StartupService {
 
             LoggerUtils.logSuccess("Managers loaded.");
             return true;
-        } catch (Exception e) {
-            Diagnostics.logFailure("StartupService#loadManagers", e);
-            return false;
-        }
+        });
     }
 
     /**
@@ -400,7 +391,7 @@ public class StartupService {
     }
 
     private boolean registerCommands() {
-        try {
+        return STEPS.run("registerCommands", () -> {
             CommandManager manager = plugin.getCommandManager();
 
             manager.register(new GLTeleportsCommand(manager, "glteleports", Permissions.ADMIN_RELOAD, plugin));
@@ -445,10 +436,7 @@ public class StartupService {
 
             LoggerUtils.logSuccess("Commands registered.");
             return true;
-        } catch (Exception e) {
-            Diagnostics.logFailure("StartupService#registerCommands", e);
-            return false;
-        }
+        });
     }
 
     private void registerApi() {
@@ -465,7 +453,7 @@ public class StartupService {
     }
 
     private boolean registerListeners() {
-        try {
+        return STEPS.run("registerListeners", () -> {
             registerCoreListeners();
 
             if (plugin.getCrossServerManager().isEnabled()) {
@@ -474,9 +462,6 @@ public class StartupService {
 
             LoggerUtils.logSuccess("Listeners registered.");
             return true;
-        } catch (Exception e) {
-            Diagnostics.logFailure("StartupService#registerListeners", e);
-            return false;
-        }
+        });
     }
 }

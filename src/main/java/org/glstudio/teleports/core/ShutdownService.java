@@ -1,7 +1,7 @@
 package org.glstudio.teleports.core;
 
 import org.glstudio.nexus.hooks.placeholder.PlaceholderHooks;
-import org.glstudio.nexus.utils.Diagnostics;
+import org.glstudio.nexus.lifecycle.Steps;
 import org.glstudio.nexus.utils.LoggerUtils;
 import org.glstudio.teleports.GTeleports;
 
@@ -12,6 +12,8 @@ import java.util.concurrent.TimeUnit;
  * Stops the plugin. Each step is isolated, so a failure cannot keep the next ones from running.
  */
 public class ShutdownService {
+
+    private static final Steps STEPS = Steps.of("ShutdownService");
     private static final Duration EXECUTOR_TIMEOUT = Duration.ofSeconds(10);
 
     private final GTeleports plugin;
@@ -27,22 +29,14 @@ public class ShutdownService {
      * Stops this service.
      */
     public void stop() {
-        step("commands", this::unregisterCommands);
-        step("placeholders", () -> PlaceholderHooks.unregister(plugin.getPlaceholderExpansion()));
-        step("managers", this::disableManagers);
-        step("multi-server", this::closeMultiServer);
-        step("executors", this::drainPendingWork);
-        step("database", this::closeDatabase);
+        STEPS.always("commands", this::unregisterCommands);
+        STEPS.always("placeholders", () -> PlaceholderHooks.unregister(plugin.getPlaceholderExpansion()));
+        STEPS.always("managers", this::disableManagers);
+        STEPS.always("multi-server", this::closeMultiServer);
+        STEPS.always("executors", this::drainPendingWork);
+        STEPS.always("database", this::closeDatabase);
 
         LoggerUtils.sendDisable(plugin);
-    }
-
-    private void step(String name, Runnable action) {
-        try {
-            action.run();
-        } catch (Exception e) {
-            Diagnostics.logFailure("ShutdownService#" + name, e);
-        }
     }
 
     private void unregisterCommands() {
