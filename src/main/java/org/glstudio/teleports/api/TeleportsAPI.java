@@ -150,7 +150,7 @@ public class TeleportsAPI implements GLTeleportsAPI {
     public CompletableFuture<Boolean> setHome(Player owner, String name, Location location) {
         String normalized = TeleportNames.normalize(name);
 
-        return plugin.getHomeManager().getHome(owner.getUniqueId(), normalized).thenCompose(existing -> {
+        return plugin.getHomeManager().getHome(owner.getUniqueId(), normalized).thenComposeAsync(existing -> {
             HomeCreateEvent event =
                     new HomeCreateEvent(owner, normalized, location, existing != null);
 
@@ -159,7 +159,7 @@ public class TeleportsAPI implements GLTeleportsAPI {
             }
 
             return setHome(owner.getUniqueId(), normalized, location);
-        });
+        }, plugin.getTasks().mainThread());
     }
 
     @Override
@@ -169,7 +169,7 @@ public class TeleportsAPI implements GLTeleportsAPI {
 
     @Override
     public CompletableFuture<Boolean> deleteHome(Player owner, String name) {
-        return plugin.getHomeManager().getHome(owner.getUniqueId(), name).thenCompose(existing -> {
+        return plugin.getHomeManager().getHome(owner.getUniqueId(), name).thenComposeAsync(existing -> {
             if (existing == null) {
                 return CompletableFuture.completedFuture(false);
             }
@@ -179,7 +179,7 @@ public class TeleportsAPI implements GLTeleportsAPI {
             }
 
             return deleteHome(owner.getUniqueId(), name);
-        });
+        }, plugin.getTasks().mainThread());
     }
 
     @Override
@@ -192,7 +192,7 @@ public class TeleportsAPI implements GLTeleportsAPI {
                                               String permission) {
         String normalized = TeleportNames.normalize(name);
 
-        return plugin.getWarpManager().getWarp(normalized).thenCompose(existing -> {
+        return plugin.getWarpManager().getWarp(normalized).thenComposeAsync(existing -> {
             WarpCreateEvent event =
                     new WarpCreateEvent(creator, normalized, location, existing != null);
 
@@ -201,7 +201,7 @@ public class TeleportsAPI implements GLTeleportsAPI {
             }
 
             return setWarp(normalized, location, permission);
-        });
+        }, plugin.getTasks().mainThread());
     }
 
     @Override
@@ -211,7 +211,7 @@ public class TeleportsAPI implements GLTeleportsAPI {
 
     @Override
     public CompletableFuture<Boolean> deleteWarp(Player actor, String name) {
-        return plugin.getWarpManager().getWarp(name).thenCompose(existing -> {
+        return plugin.getWarpManager().getWarp(name).thenComposeAsync(existing -> {
             if (existing == null) {
                 return CompletableFuture.completedFuture(false);
             }
@@ -221,7 +221,7 @@ public class TeleportsAPI implements GLTeleportsAPI {
             }
 
             return deleteWarp(name);
-        });
+        }, plugin.getTasks().mainThread());
     }
 
     @Override

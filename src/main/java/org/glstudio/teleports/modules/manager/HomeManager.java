@@ -106,7 +106,7 @@ public class HomeManager {
         String server = plugin.getCrossServerManager().currentServer();
         String world = location.getWorld().getName();
 
-        CompletableFuture<Void> result = getHomes(owner).thenCompose(homes -> {
+        CompletableFuture<Void> result = getHomes(owner).thenComposeAsync(homes -> {
             boolean exists = homes.stream().anyMatch(home -> home.getName().equalsIgnoreCase(normalized));
 
             if (!exists && limit != UNLIMITED && homes.size() >= limit) {
@@ -137,7 +137,7 @@ public class HomeManager {
                         plugin.getMessages().send(player, exists ? "home.updated" : "home.created",
                                 "{name}", normalized);
                     });
-        });
+        }, plugin.getTasks().mainThread());
 
         return Futures.guard(result, "HomeManager#setHome", player);
     }
@@ -164,7 +164,7 @@ public class HomeManager {
     public CompletableFuture<Void> deleteHome(Player player, String name) {
         String normalized = TeleportNames.normalize(name);
 
-        CompletableFuture<Void> result = getHome(player.getUniqueId(), normalized).thenCompose(existing -> {
+        CompletableFuture<Void> result = getHome(player.getUniqueId(), normalized).thenComposeAsync(existing -> {
             if (existing == null) {
                 plugin.getMessages().send(player, "errors.home-not-found", "{name}", name);
                 return CompletableFuture.completedFuture(null);
@@ -183,7 +183,7 @@ public class HomeManager {
 
                         plugin.getMessages().send(player, "home.deleted", "{name}", existing.getName());
                     });
-        });
+        }, plugin.getTasks().mainThread());
 
         return Futures.guard(result, "HomeManager#deleteHome", player);
     }

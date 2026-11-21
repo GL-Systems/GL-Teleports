@@ -15,6 +15,9 @@ import org.glstudio.nexus.utils.TextFormat;
  * it — a broken third-party plugin should cost its own feature, not everybody's teleports — so
  * every call is wrapped. And a handler that cancels may leave a message, which is delivered here
  * rather than at each of the dozen call sites.
+ *
+ * <p>The events are synchronous, so they are fired on the main thread only; a step that follows a
+ * database lookup hops back to it first.
  */
 public final class Events {
 

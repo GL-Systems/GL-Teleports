@@ -123,7 +123,7 @@ public class WarpManager {
         String server = plugin.getCrossServerManager().currentServer();
         Location location = player.getLocation();
 
-        CompletableFuture<Void> result = getWarp(normalized).thenCompose(existing -> {
+        CompletableFuture<Void> result = getWarp(normalized).thenComposeAsync(existing -> {
             if (existing != null && !plugin.getCrossServerManager().isLocal(existing.getServer())) {
                 plugin.getMessages().send(player, "errors.warp-on-other-server",
                         "{name}", normalized, "{server}", String.valueOf(existing.getServer()));
@@ -150,7 +150,7 @@ public class WarpManager {
                         plugin.getMessages().send(player, existing != null ? "warp.updated" : "warp.created",
                                 "{name}", normalized);
                     });
-        });
+        }, plugin.getTasks().mainThread());
 
         return Futures.guard(result, "WarpManager#setWarp", player);
     }
@@ -165,7 +165,7 @@ public class WarpManager {
 
         String normalized = TeleportNames.normalize(name);
 
-        CompletableFuture<Void> result = getWarp(normalized).thenCompose(existing -> {
+        CompletableFuture<Void> result = getWarp(normalized).thenComposeAsync(existing -> {
             if (existing == null) {
                 plugin.getMessages().send(player, "errors.warp-not-found", "{name}", name);
                 return CompletableFuture.completedFuture(null);
@@ -182,7 +182,7 @@ public class WarpManager {
                                 "{name}", existing.getName(),
                                 "{permission}", permission == null || permission.isEmpty() ? "-" : permission);
                     });
-        });
+        }, plugin.getTasks().mainThread());
 
         return Futures.guard(result, "WarpManager#setWarpPermission", player);
     }

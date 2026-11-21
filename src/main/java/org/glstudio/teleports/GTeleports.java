@@ -11,6 +11,7 @@ import org.glstudio.nexus.modules.menu.MenuManager;
 import org.glstudio.nexus.modules.menu.chat.ChatInputManager;
 import org.glstudio.nexus.proxy.ProxyMessenger;
 import org.glstudio.nexus.utils.ResolvedConfig;
+import org.glstudio.nexus.utils.Tasks;
 import org.glstudio.teleports.common.config.MultiServerSettings;
 import org.glstudio.teleports.common.network.PacketHandler;
 import org.glstudio.teleports.common.storage.redis.PlayerRegistry;
@@ -72,6 +73,7 @@ public final class GTeleports extends JavaPlugin {
     private BackupService backupService;
 
     private NexusExecutors executors;
+    private Tasks tasks;
 
     private DatabaseManager databaseManager;
 

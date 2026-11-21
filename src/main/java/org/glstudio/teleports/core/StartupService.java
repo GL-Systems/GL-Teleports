@@ -12,6 +12,7 @@ import org.glstudio.nexus.modules.lang.LanguageFile;
 import org.glstudio.nexus.proxy.ProxyMessenger;
 import org.glstudio.nexus.utils.Diagnostics;
 import org.glstudio.nexus.utils.LoggerUtils;
+import org.glstudio.nexus.utils.Tasks;
 import org.glstudio.nexus.utils.TextFormat;
 import org.glstudio.teleports.GTeleports;
 import org.glstudio.teleports.api.GLTeleportsAPI;
@@ -188,6 +189,7 @@ public class StartupService {
                     .ioThreads(Math.max(2, poolSize))
                     .scheduler(true)
                     .build());
+            plugin.setTasks(new Tasks(plugin));
             plugin.setMultiServerSupervisor(new MultiServerSupervisor(plugin));
             return true;
         });
