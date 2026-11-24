@@ -141,7 +141,7 @@ public class MongoProvider extends AbstractProvider {
 
     @Override
     public CompletableFuture<Void> shutdown() {
-        return run(() -> {
+        return closeHere(() -> {
             if (mongoClient != null) {
                 mongoClient.close();
             }

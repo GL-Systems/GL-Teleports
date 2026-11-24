@@ -181,7 +181,7 @@ public class H2Provider extends SqlProvider {
 
     @Override
     public CompletableFuture<Void> shutdown() {
-        return run(() -> {
+        return closeHere(() -> {
             if (dataSource != null && !dataSource.isClosed()) {
                 dataSource.close();
             }

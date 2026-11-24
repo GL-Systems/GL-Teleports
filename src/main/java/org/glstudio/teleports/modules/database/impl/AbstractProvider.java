@@ -35,6 +35,19 @@ public abstract class AbstractProvider implements DatabaseProvider {
     }
 
     /**
+     * Runs a closing step on the calling thread. It runs at shutdown, after the I/O threads were
+     * drained and stopped, so a task handed to them would be rejected and nothing would be closed.
+     */
+    protected CompletableFuture<Void> closeHere(Runnable task) {
+        try {
+            task.run();
+            return CompletableFuture.completedFuture(null);
+        } catch (RuntimeException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
+    /**
      * Computes a value on the I/O threads.
      */
     protected <T> CompletableFuture<T> supply(Supplier<T> task) {
